@@ -4,11 +4,14 @@ Este é um jogo estilo top-down simples criado com Python e Pygame. O jogo apres
 
 ## Características
 
+- Tela inicial com menu
+- Seleção de personagem com diferentes atributos
 - Movimentação em quatro direções (cima, baixo, esquerda, direita)
 - Sistema de colisão com paredes e obstáculos
 - Mapa 2D renderizado com tiles
 - Sistema de múltiplos mapas com transições
 - Interação com portas e objetos
+- Menu de pausa
 - Controles simples e intuitivos
 
 ## Requisitos
@@ -37,7 +40,15 @@ python main.py
 
 - Setas direcionais ou WASD: Movimentar o personagem
 - Tecla E: Interagir com portas e objetos
-- ESC: Sair do jogo
+- ESC: Pausar o jogo / Voltar ao menu anterior
+- ENTER: Confirmar seleção nos menus
+
+### Personagens
+
+O jogo oferece três tipos de personagens para escolher:
+- **Guerreiro**: Velocidade média, representado pela cor vermelha
+- **Arqueiro**: Velocidade alta, representado pela cor verde
+- **Mago**: Velocidade baixa, representado pela cor azul
 
 ### Sistema de Mapas
 
@@ -55,20 +66,24 @@ Você pode mudar de mapa de duas formas:
 
 ```
 game-top-down/
-├── assets/            # Recursos do jogo
-│   ├── images/        # Imagens e sprites
-│   └── sounds/        # Efeitos sonoros e músicas
-├── maps/              # Arquivos JSON dos mapas
-│   ├── map1.json      # Mapa da Floresta
-│   ├── map2.json      # Mapa da Caverna
-│   ├── map3.json      # Mapa do Deserto
-│   └── map4.json      # Mapa do Lago
-├── main.py            # Ponto de entrada do jogo
-├── game.py            # Classe principal do jogo
-├── player.py          # Classe do jogador
-├── map.py             # Classe do mapa
-├── requirements.txt   # Dependências
-└── README.md          # Este arquivo
+├── assets/                # Recursos do jogo
+│   ├── images/            # Imagens e sprites
+│   └── sounds/            # Efeitos sonoros e músicas
+├── maps/                  # Arquivos JSON dos mapas
+│   ├── map1.json          # Mapa da Floresta
+│   ├── map2.json          # Mapa da Caverna
+│   ├── map3.json          # Mapa do Deserto
+│   └── map4.json          # Mapa do Lago
+├── main.py                # Ponto de entrada do jogo
+├── game.py                # Classe principal do jogo
+├── player.py              # Classe do jogador
+├── map.py                 # Classe do mapa
+├── game_state.py          # Gerenciador de estados do jogo
+├── title_screen.py        # Tela de título
+├── character_select.py    # Tela de seleção de personagem
+├── pause_screen.py        # Tela de pausa
+├── requirements.txt       # Dependências
+└── README.md              # Este arquivo
 ```
 
 ## Personalização dos Mapas

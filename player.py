@@ -4,12 +4,24 @@
 import pygame
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, character_data=None):
         super().__init__()
         
-        # Cria uma imagem temporária para o jogador (um quadrado azul)
+        # Dados do personagem
+        if character_data is None:
+            # Personagem padrão
+            self.name = "Jogador"
+            self.color = (0, 0, 255)  # Azul
+            self.speed = 5
+        else:
+            # Personagem personalizado
+            self.name = character_data.get("name", "Jogador")
+            self.color = character_data.get("color", (0, 0, 255))
+            self.speed = character_data.get("speed", 5)
+        
+        # Cria uma imagem para o jogador
         self.image = pygame.Surface((32, 32))
-        self.image.fill((0, 0, 255))  # Azul
+        self.image.fill(self.color)
         
         # Define o retângulo do sprite
         self.rect = self.image.get_rect()
@@ -17,7 +29,6 @@ class Player(pygame.sprite.Sprite):
         
         # Vetores de velocidade
         self.velocity = pygame.math.Vector2(0, 0)
-        self.speed = 5
         
         # Direção que o jogador está olhando
         self.direction = "down"
@@ -56,16 +67,6 @@ class Player(pygame.sprite.Sprite):
         # Atualiza a posição
         self.rect.x += self.velocity.x
         self.rect.y += self.velocity.y
-        
-        # Impede que o jogador saia da tela
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > 800:
-            self.rect.right = 800
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > 600:
-            self.rect.bottom = 600
     
     def handle_event(self, event):
         """Processa eventos específicos do jogador"""
@@ -80,4 +81,15 @@ class Player(pygame.sprite.Sprite):
     def set_position(self, x, y):
         """Define a posição do jogador"""
         self.rect.x = x
-        self.rect.y = y 
+        self.rect.y = y
+    
+    def constrain_to_map(self, map_width, map_height):
+        """Impede que o jogador saia dos limites do mapa"""
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > map_width:
+            self.rect.right = map_width
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > map_height:
+            self.rect.bottom = map_height 
