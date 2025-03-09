@@ -1,0 +1,292 @@
+{
+  "tile_types": {
+    "0": {
+      "name": "Vazio",
+      "type": "terreno",
+      "collision": false,
+      "image": "tiles/empty.png",
+      "details": {
+        "walkable": true
+      }
+    },
+    "1": {
+      "name": "Parede",
+      "type": "terreno",
+      "collision": true,
+      "image": "tiles/wall.png",
+      "details": {
+        "walkable": false,
+        "destructible": false
+      }
+    },
+    "2": {
+      "name": "Porta",
+      "type": "objeto",
+      "collision": false,
+      "image": "objects/door.png",
+      "details": {
+        "interactive": true,
+        "animation": "on_interaction",
+        "animation_frames": 4,
+        "animation_speed": 0.1
+      }
+    },
+    "3": {
+      "name": "Árvore",
+      "type": "objeto",
+      "collision": true,
+      "image": "objects/tree.png",
+      "details": {
+        "walkable": false,
+        "destructible": false,
+        "animation": "ambient",
+        "animation_frames": 2,
+        "animation_speed": 0.05
+      }
+    },
+    "4": {
+      "name": "Arbusto",
+      "type": "objeto",
+      "collision": true,
+      "image": "objects/bush.png",
+      "details": {
+        "walkable": false,
+        "destructible": true,
+        "drops": ["item_7", "item_8"]
+      }
+    },
+    "5": {
+      "name": "Água",
+      "type": "terreno",
+      "collision": true,
+      "image": "tiles/water.png",
+      "details": {
+        "walkable": false,
+        "animation": "ambient",
+        "animation_frames": 4,
+        "animation_speed": 0.1
+      }
+    },
+    "6": {
+      "name": "Grama Alta",
+      "type": "terreno",
+      "collision": false,
+      "image": "tiles/tall_grass.png",
+      "details": {
+        "walkable": true,
+        "animation": "on_walk",
+        "animation_frames": 3,
+        "animation_speed": 0.2
+      }
+    },
+    "7": {
+      "name": "Moeda",
+      "type": "item",
+      "collision": false,
+      "image": "items/coin.png",
+      "details": {
+        "collectible": true,
+        "value": 1,
+        "animation": "ambient",
+        "animation_frames": 6,
+        "animation_speed": 0.1
+      }
+    },
+    "8": {
+      "name": "Poção de Vida",
+      "type": "item",
+      "collision": false,
+      "image": "items/health_potion.png",
+      "details": {
+        "collectible": true,
+        "health_restore": 20,
+        "animation": "ambient",
+        "animation_frames": 4,
+        "animation_speed": 0.08
+      }
+    },
+    "9": {
+      "name": "Baú",
+      "type": "objeto",
+      "collision": true,
+      "image": "objects/chest.png",
+      "details": {
+        "interactive": true,
+        "animation": "on_interaction",
+        "animation_frames": 3,
+        "animation_speed": 0.2,
+        "drops": ["item_7", "item_8", "item_10"]
+      }
+    },
+    "10": {
+      "name": "Chave",
+      "type": "item",
+      "collision": false,
+      "image": "items/key.png",
+      "details": {
+        "collectible": true,
+        "opens": ["door_locked"],
+        "animation": "ambient",
+        "animation_frames": 4,
+        "animation_speed": 0.1
+      }
+    },
+    "11": {
+      "name": "Porta Trancada",
+      "type": "objeto",
+      "collision": true,
+      "image": "objects/door_locked.png",
+      "details": {
+        "interactive": true,
+        "requires_key": true,
+        "key_type": "item_10",
+        "animation": "on_interaction",
+        "animation_frames": 5,
+        "animation_speed": 0.15
+      }
+    },
+    "12": {
+      "name": "Placa",
+      "type": "objeto",
+      "collision": true,
+      "image": "objects/sign.png",
+      "details": {
+        "interactive": true,
+        "message": "Mensagem da placa será definida no mapa"
+      }
+    },
+    "20": {
+      "name": "Slime",
+      "type": "inimigo",
+      "collision": true,
+      "image": "enemies/slime.png",
+      "details": {
+        "health": 20,
+        "damage": 5,
+        "speed": 1,
+        "behavior": "random",
+        "animation": "movement",
+        "animation_frames": 4,
+        "animation_speed": 0.15,
+        "drops": ["item_7"]
+      }
+    },
+    "21": {
+      "name": "Morcego",
+      "type": "inimigo",
+      "collision": true,
+      "image": "enemies/bat.png",
+      "details": {
+        "health": 10,
+        "damage": 3,
+        "speed": 2,
+        "behavior": "chase",
+        "detection_radius": 150,
+        "animation": "movement",
+        "animation_frames": 4,
+        "animation_speed": 0.2,
+        "drops": ["item_7", "item_8"]
+      }
+    },
+    "22": {
+      "name": "Esqueleto",
+      "type": "inimigo",
+      "collision": true,
+      "image": "enemies/skeleton.png",
+      "details": {
+        "health": 30,
+        "damage": 8,
+        "speed": 1.5,
+        "behavior": "patrol",
+        "patrol_radius": 200,
+        "animation": "movement",
+        "animation_frames": 6,
+        "animation_speed": 0.12,
+        "drops": ["item_7", "item_10"]
+      }
+    },
+    "30": {
+      "name": "NPC Aldeão",
+      "type": "npc",
+      "collision": true,
+      "image": "npcs/villager.png",
+      "details": {
+        "interactive": true,
+        "dialog": "Olá, viajante! Bem-vindo à nossa vila.",
+        "animation": "idle",
+        "animation_frames": 2,
+        "animation_speed": 0.05
+      }
+    },
+    "31": {
+      "name": "NPC Comerciante",
+      "type": "npc",
+      "collision": true,
+      "image": "npcs/merchant.png",
+      "details": {
+        "interactive": true,
+        "dialog": "Tenho itens para vender! Quer dar uma olhada?",
+        "shop": true,
+        "items_for_sale": ["item_8", "item_10"],
+        "animation": "idle",
+        "animation_frames": 2,
+        "animation_speed": 0.05
+      }
+    },
+    "40": {
+      "name": "Escada para Baixo",
+      "type": "transição",
+      "collision": false,
+      "image": "objects/stairs_down.png",
+      "details": {
+        "interactive": true,
+        "target_map": "será definido no mapa",
+        "target_x": "será definido no mapa",
+        "target_y": "será definido no mapa"
+      }
+    },
+    "41": {
+      "name": "Escada para Cima",
+      "type": "transição",
+      "collision": false,
+      "image": "objects/stairs_up.png",
+      "details": {
+        "interactive": true,
+        "target_map": "será definido no mapa",
+        "target_x": "será definido no mapa",
+        "target_y": "será definido no mapa"
+      }
+    },
+    "42": {
+      "name": "Portal",
+      "type": "transição",
+      "collision": false,
+      "image": "objects/portal.png",
+      "details": {
+        "interactive": true,
+        "target_map": "será definido no mapa",
+        "target_x": "será definido no mapa",
+        "target_y": "será definido no mapa",
+        "animation": "ambient",
+        "animation_frames": 8,
+        "animation_speed": 0.15
+      }
+    }
+  },
+  
+  "animation_types": {
+    "none": "Sem animação",
+    "ambient": "Animação contínua sem interação",
+    "on_interaction": "Animação quando o jogador interage",
+    "on_walk": "Animação quando o jogador caminha sobre",
+    "movement": "Animação durante movimento (inimigos/NPCs)",
+    "idle": "Animação quando parado (inimigos/NPCs)"
+  },
+  
+  "enemy_behaviors": {
+    "static": "Inimigo estático que não se move",
+    "random": "Movimento aleatório",
+    "patrol": "Patrulha em uma área definida",
+    "chase": "Persegue o jogador quando detectado"
+  }
+} 
