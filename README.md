@@ -1,18 +1,20 @@
 # Jogo Top-Down em Python
 
-Este é um jogo estilo top-down simples criado com Python e Pygame. O jogo apresenta um personagem que pode ser controlado pelo jogador em um mapa 2D visto de cima.
+Este é um jogo estilo top-down simples criado com Python e Pygame. O jogo apresenta um personagem que pode ser controlado pelo jogador em um mapa 2D visto de cima, com sistema de múltiplos mapas e transições entre eles.
 
 ## Características
 
 - Movimentação em quatro direções (cima, baixo, esquerda, direita)
 - Sistema de colisão com paredes e obstáculos
 - Mapa 2D renderizado com tiles
+- Sistema de múltiplos mapas com transições
+- Interação com portas e objetos
 - Controles simples e intuitivos
 
 ## Requisitos
 
 - Python 3.6+
-- Pygame 2.5.2
+- Pygame 2.6.1
 
 ## Instalação
 
@@ -34,7 +36,20 @@ python main.py
 ### Controles
 
 - Setas direcionais ou WASD: Movimentar o personagem
+- Tecla E: Interagir com portas e objetos
 - ESC: Sair do jogo
+
+### Sistema de Mapas
+
+O jogo possui 4 mapas diferentes:
+1. **Floresta**: Mapa inicial com vegetação
+2. **Caverna**: Um ambiente subterrâneo escuro
+3. **Deserto**: Área árida com pouca vegetação
+4. **Lago**: Região com um grande corpo d'água
+
+Você pode mudar de mapa de duas formas:
+- **Transição por borda**: Ao chegar na extremidade de um mapa, você será transportado para o mapa adjacente
+- **Portas**: Interagindo com portas (tiles marrons) usando a tecla E
 
 ## Estrutura do Projeto
 
@@ -43,6 +58,11 @@ game-top-down/
 ├── assets/            # Recursos do jogo
 │   ├── images/        # Imagens e sprites
 │   └── sounds/        # Efeitos sonoros e músicas
+├── maps/              # Arquivos JSON dos mapas
+│   ├── map1.json      # Mapa da Floresta
+│   ├── map2.json      # Mapa da Caverna
+│   ├── map3.json      # Mapa do Deserto
+│   └── map4.json      # Mapa do Lago
 ├── main.py            # Ponto de entrada do jogo
 ├── game.py            # Classe principal do jogo
 ├── player.py          # Classe do jogador
@@ -50,6 +70,16 @@ game-top-down/
 ├── requirements.txt   # Dependências
 └── README.md          # Este arquivo
 ```
+
+## Personalização dos Mapas
+
+Os mapas são definidos em arquivos JSON na pasta `maps/`. Cada arquivo contém:
+- Dimensões e propriedades visuais do mapa
+- Matriz de dados representando os tiles (0 = vazio, 1 = parede, 2 = porta)
+- Definição de portais e suas conexões
+- Configuração de transições pelas bordas
+
+Você pode editar esses arquivos para criar seus próprios mapas e conexões.
 
 ## Expandindo o Jogo
 

@@ -21,6 +21,9 @@ class Player(pygame.sprite.Sprite):
         
         # Direção que o jogador está olhando
         self.direction = "down"
+        
+        # Estado de interação
+        self.interacting = False
     
     def update(self):
         """Atualiza a posição do jogador com base nos controles"""
@@ -62,4 +65,19 @@ class Player(pygame.sprite.Sprite):
         if self.rect.top < 0:
             self.rect.top = 0
         if self.rect.bottom > 600:
-            self.rect.bottom = 600 
+            self.rect.bottom = 600
+    
+    def handle_event(self, event):
+        """Processa eventos específicos do jogador"""
+        if event.type == pygame.KEYDOWN:
+            # Tecla E para interagir com objetos
+            if event.key == pygame.K_e:
+                self.interacting = True
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_e:
+                self.interacting = False
+    
+    def set_position(self, x, y):
+        """Define a posição do jogador"""
+        self.rect.x = x
+        self.rect.y = y 
