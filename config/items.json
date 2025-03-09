@@ -28,7 +28,8 @@
         "interactive": true,
         "animation": "on_interaction",
         "animation_frames": 4,
-        "animation_speed": 0.1
+        "animation_speed": 0.1,
+        "interaction_sound": "effects/door.wav"
       }
     },
     "3": {
@@ -52,7 +53,8 @@
       "details": {
         "walkable": false,
         "destructible": true,
-        "drops": ["item_7", "item_8"]
+        "drops": ["item_7", "item_8"],
+        "interaction_sound": "effects/bush.wav"
       }
     },
     "5": {
@@ -76,7 +78,8 @@
         "walkable": true,
         "animation": "on_walk",
         "animation_frames": 3,
-        "animation_speed": 0.2
+        "animation_speed": 0.2,
+        "interaction_sound": "effects/grass.wav"
       }
     },
     "7": {
@@ -89,7 +92,8 @@
         "value": 1,
         "animation": "ambient",
         "animation_frames": 6,
-        "animation_speed": 0.1
+        "animation_speed": 0.1,
+        "interaction_sound": "effects/coin.wav"
       }
     },
     "8": {
@@ -102,7 +106,8 @@
         "health_restore": 20,
         "animation": "ambient",
         "animation_frames": 4,
-        "animation_speed": 0.08
+        "animation_speed": 0.08,
+        "interaction_sound": "effects/potion.wav"
       }
     },
     "9": {
@@ -115,7 +120,8 @@
         "animation": "on_interaction",
         "animation_frames": 3,
         "animation_speed": 0.2,
-        "drops": ["item_7", "item_8", "item_10"]
+        "drops": ["item_7", "item_8", "item_10"],
+        "interaction_sound": "effects/chest.wav"
       }
     },
     "10": {
@@ -128,7 +134,8 @@
         "opens": ["door_locked"],
         "animation": "ambient",
         "animation_frames": 4,
-        "animation_speed": 0.1
+        "animation_speed": 0.1,
+        "interaction_sound": "effects/key.wav"
       }
     },
     "11": {
@@ -142,7 +149,8 @@
         "key_type": "item_10",
         "animation": "on_interaction",
         "animation_frames": 5,
-        "animation_speed": 0.15
+        "animation_speed": 0.15,
+        "interaction_sound": "effects/door_locked.wav"
       }
     },
     "12": {
@@ -152,7 +160,8 @@
       "image": "objects/sign.png",
       "details": {
         "interactive": true,
-        "message": "Mensagem da placa será definida no mapa"
+        "message": "Mensagem da placa será definida no mapa",
+        "interaction_sound": "effects/sign.wav"
       }
     },
     "20": {

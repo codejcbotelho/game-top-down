@@ -15,6 +15,7 @@ class Game:
     def __init__(self):
         # Inicializa o pygame
         pygame.init()
+        pygame.mixer.init()  # Inicializa o mixer para áudio
         
         # Constantes
         self.WIDTH = 800
@@ -52,22 +53,74 @@ class Game:
         # Transição entre mapas
         self.transition_cooldown = 0
         
+        # Trilha sonora atual
+        self.current_soundtrack = None
+        
         # Flag para controlar o loop principal
         self.running = True
     
     def start_game(self, character_data=None):
         """Inicia um novo jogo"""
-        # Carrega o mapa inicial
-        self.current_map_id = "map1"
-        self.map = Map(self.current_map_id)
+        try:
+            # Carrega o mapa inicial
+            self.current_map_id = "map1"
+            self.map = Map(self.current_map_id)
+            
+            # Verifica se o mapa foi carregado corretamente
+            if self.map.id == "error":
+                print("Aviso: Mapa inicial não pôde ser carregado corretamente.")
+                self.show_error("Erro ao carregar o mapa inicial. Verifique os arquivos do jogo.")
+            
+            # Cria o jogador
+            self.all_sprites.empty()
+            self.player = Player(self.WIDTH // 2, self.HEIGHT // 2, character_data)
+            self.all_sprites.add(self.player)
+            
+            # Inicia a trilha sonora do mapa
+            self.play_map_soundtrack()
+            
+            # Muda para o estado de jogo
+            self.game_state.change_state(GameState.PLAYING)
+        except Exception as e:
+            print(f"Erro ao iniciar o jogo: {e}")
+            self.show_error("Erro ao iniciar o jogo. Verifique os arquivos do jogo.")
+    
+    def play_map_soundtrack(self):
+        """Toca a trilha sonora do mapa atual"""
+        soundtrack_path = self.map.get_soundtrack_path()
         
-        # Cria o jogador
-        self.all_sprites.empty()
-        self.player = Player(self.WIDTH // 2, self.HEIGHT // 2, character_data)
-        self.all_sprites.add(self.player)
-        
-        # Muda para o estado de jogo
-        self.game_state.change_state(GameState.PLAYING)
+        # Se não há trilha sonora definida, não faz nada
+        if not soundtrack_path:
+            return
+            
+        # Verifica se o arquivo existe
+        full_path = os.path.join("assets", "sounds", soundtrack_path)
+        if not os.path.exists(full_path):
+            print(f"Aviso: Arquivo de áudio não encontrado: {full_path}")
+            # Não tenta criar o arquivo nem tocar a trilha
+            return
+            
+        # Se a trilha sonora for a mesma que já está tocando, não faz nada
+        if self.current_soundtrack == soundtrack_path:
+            return
+            
+        # Para a trilha sonora atual se houver
+        try:
+            if pygame.mixer.music.get_busy() and self.current_soundtrack != soundtrack_path:
+                pygame.mixer.music.stop()
+        except Exception as e:
+            print(f"Aviso: Erro ao parar trilha sonora: {e}")
+            
+        # Carrega e toca a nova trilha sonora
+        try:
+            pygame.mixer.music.load(full_path)
+            pygame.mixer.music.play(-1)  # Loop infinito
+            self.current_soundtrack = soundtrack_path
+        except Exception as e:
+            print(f"Aviso: Não foi possível tocar trilha sonora {full_path}: {e}")
+            # Se ocorrer um erro, define a trilha atual como None para evitar problemas
+            self.current_soundtrack = None
+            # Continua a execução do jogo normalmente
     
     def process_events(self):
         """Processa os eventos (teclado, mouse, etc)"""
@@ -142,6 +195,13 @@ class Game:
                 if portal:
                     self.change_map(portal["target_map"], portal["target_x"], portal["target_y"])
                     self.player.interacting = False
+                else:
+                    # Verifica interação com outros objetos
+                    obj = self.map.check_object_interaction(self.player)
+                    if obj:
+                        # Processa a interação com o objeto
+                        self.process_object_interaction(obj)
+                        self.player.interacting = False
             
             # Verifica transições de borda
             if self.transition_cooldown == 0:
@@ -157,14 +217,21 @@ class Game:
                 self.show_error(f"Mapa não encontrado: {map_id}")
                 return
             
+            # Guarda a trilha sonora atual
+            previous_soundtrack = self.current_soundtrack
+            
             # Carrega o novo mapa
             self.current_map_id = map_id
             self.map = Map(map_id)
             
             # Posiciona o jogador
-            self.player.set_position(player_x, player_y)
+            self.player.rect.x = player_x * self.map.tile_size
+            self.player.rect.y = player_y * self.map.tile_size
             
-            # Define um cooldown para evitar transições repetidas
+            # Atualiza a trilha sonora
+            self.play_map_soundtrack()
+            
+            # Define um cooldown para evitar transições múltiplas
             self.transition_cooldown = 10
         except Exception as e:
             self.show_error(f"Erro ao mudar de mapa: {e}")
@@ -237,4 +304,42 @@ class Game:
             self.clock.tick(self.FPS)
         
         pygame.quit()
-        sys.exit() 
+        sys.exit()
+
+    def process_object_interaction(self, obj):
+        """Processa a interação com um objeto"""
+        obj_id = str(obj.get("id", 0))
+        details = obj.get("details", {})
+        
+        # Verifica o tipo de objeto e processa de acordo
+        if obj_id in self.map.item_config.get("tile_types", {}):
+            item_config = self.map.item_config["tile_types"][obj_id]
+            item_type = item_config.get("type", "")
+            
+            # Processa baús
+            if item_type == "objeto" and "chest" in item_config.get("name", "").lower():
+                # Mostra mensagem sobre os itens encontrados
+                drops = details.get("drops", [])
+                if drops:
+                    drop_names = []
+                    for drop in drops:
+                        drop_id = drop.replace("item_", "")
+                        if drop_id in self.map.item_config.get("tile_types", {}):
+                            drop_names.append(self.map.item_config["tile_types"][drop_id].get("name", "Item desconhecido"))
+                    
+                    if drop_names:
+                        self.show_error(f"Você encontrou: {', '.join(drop_names)}")
+            
+            # Processa NPCs
+            elif item_type == "npc":
+                # Mostra diálogo do NPC
+                dialog = details.get("dialog", "...")
+                if dialog:
+                    self.show_error(dialog)
+            
+            # Processa placas
+            elif "sign" in item_config.get("name", "").lower():
+                # Mostra mensagem da placa
+                message = details.get("message", "")
+                if message:
+                    self.show_error(message) 
