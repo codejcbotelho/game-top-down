@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pygame
+import math
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, character_data=None):
@@ -27,6 +28,9 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         
+        # A hitbox é o próprio retângulo do sprite
+        self.hitbox = self.rect
+        
         # Vetores de velocidade
         self.velocity = pygame.math.Vector2(0, 0)
         
@@ -35,6 +39,10 @@ class Player(pygame.sprite.Sprite):
         
         # Estado de interação
         self.interacting = False
+        
+        # Contador para limitar a frequência dos logs
+        self.stuck_log_counter = 0
+        self.stuck_log_frequency = 60  # Só mostra log a cada 60 frames (aproximadamente 1 segundo)
     
     def update(self):
         """Atualiza a posição do jogador com base nos controles"""
@@ -64,9 +72,9 @@ class Player(pygame.sprite.Sprite):
         if self.velocity.length() > 0:
             self.velocity = self.velocity.normalize() * self.speed
         
-        # Atualiza a posição
-        self.rect.x += self.velocity.x
-        self.rect.y += self.velocity.y
+        # Não atualiza a posição aqui, isso será feito pelo Game após verificar colisões
+        # self.rect.x += self.velocity.x
+        # self.rect.y += self.velocity.y
     
     def handle_event(self, event):
         """Processa eventos específicos do jogador"""
@@ -82,6 +90,7 @@ class Player(pygame.sprite.Sprite):
         """Define a posição do jogador"""
         self.rect.x = x
         self.rect.y = y
+        self.update_hitbox()
     
     def constrain_to_map(self, map_width, map_height):
         """Impede que o jogador saia dos limites do mapa"""
@@ -92,4 +101,83 @@ class Player(pygame.sprite.Sprite):
         if self.rect.top < 0:
             self.rect.top = 0
         if self.rect.bottom > map_height:
-            self.rect.bottom = map_height 
+            self.rect.bottom = map_height
+        self.update_hitbox()
+    
+    def update_hitbox(self):
+        """Atualiza a posição da hitbox para centralizar com o sprite"""
+        # A hitbox é o próprio retângulo do sprite
+        self.hitbox = self.rect
+    
+    def draw_hitbox(self, screen):
+        """Desenha a hitbox do jogador para depuração"""
+        # Desenha um retângulo vermelho semi-transparente para representar a hitbox
+        hitbox_surface = pygame.Surface((self.hitbox.width, self.hitbox.height), pygame.SRCALPHA)
+        hitbox_surface.fill((255, 0, 0, 128))  # Vermelho semi-transparente
+        screen.blit(hitbox_surface, self.hitbox.topleft)
+        
+        # Desenha a borda da hitbox
+        pygame.draw.rect(screen, (255, 0, 0), self.hitbox, 1)
+    
+    def move_with_collision(self, collision_rects):
+        """Move o jogador considerando colisões"""
+        # Guarda a posição original
+        original_x = self.rect.x
+        original_y = self.rect.y
+        collision_detected = False
+        
+        # Movimento em dois passos (horizontal e depois vertical) para permitir deslizamento
+        
+        # 1. Movimento horizontal
+        if self.velocity.x != 0:
+            # Tenta mover horizontalmente
+            self.rect.x += self.velocity.x
+            
+            # Verifica colisões horizontais
+            horizontal_collision = False
+            for rect in collision_rects:
+                if self.rect.colliderect(rect):
+                    horizontal_collision = True
+                    collision_detected = True
+                    # Ajusta a posição para evitar sobreposição
+                    if self.velocity.x > 0:  # Movendo para a direita
+                        self.rect.right = rect.left
+                    else:  # Movendo para a esquerda
+                        self.rect.left = rect.right
+                    break
+        
+        # 2. Movimento vertical
+        if self.velocity.y != 0:
+            # Tenta mover verticalmente
+            self.rect.y += self.velocity.y
+            
+            # Verifica colisões verticais
+            vertical_collision = False
+            for rect in collision_rects:
+                if self.rect.colliderect(rect):
+                    vertical_collision = True
+                    collision_detected = True
+                    # Ajusta a posição para evitar sobreposição
+                    if self.velocity.y > 0:  # Movendo para baixo
+                        self.rect.bottom = rect.top
+                    else:  # Movendo para cima
+                        self.rect.top = rect.bottom
+                    break
+        
+        # Verifica se o jogador está completamente preso (não consegue se mover em nenhuma direção)
+        if collision_detected and self.velocity.length() > 0:
+            # Verifica se o jogador não conseguiu se mover em nenhuma direção
+            if self.rect.x == original_x and self.rect.y == original_y:
+                # Incrementa o contador e só mostra o log periodicamente
+                self.stuck_log_counter += 1
+                if self.stuck_log_counter >= self.stuck_log_frequency:
+                    print("Log: Jogador preso - Não consegue se mover em nenhuma direção")
+                    self.stuck_log_counter = 0
+            else:
+                # Resetar o contador se o jogador conseguiu se mover
+                self.stuck_log_counter = 0
+        else:
+            # Resetar o contador se não houver colisão
+            self.stuck_log_counter = 0
+        
+        return collision_detected 

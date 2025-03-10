@@ -49,6 +49,18 @@ class Game:
         # Mensagem de erro (se houver)
         self.error_message = None
         self.error_timer = 0
+        self.error_item_id = None  # ID do item que gerou a mensagem
+        self.error_is_dialog = False  # Indica se é um diálogo (não um erro)
+        
+        # Controle de colisão
+        self.last_collision_time = 0
+        self.collision_message_cooldown = 60  # 1 segundo a 60 FPS
+        self.last_collision_state = False  # Estado da última colisão
+        self.collision_log_counter = 0
+        self.collision_log_frequency = 120  # Só mostra log a cada 120 frames (aproximadamente 2 segundos)
+        
+        # Opções de depuração
+        self.show_hitbox = False
         
         # Transição entre mapas
         self.transition_cooldown = 0
@@ -164,6 +176,20 @@ class Game:
                 elif action == "quit":
                     self.running = False
                     return
+            
+            # Eventos de teclado
+            elif event.type == pygame.KEYDOWN:
+                # Tecla ESC para pausar/despausar
+                if event.key == pygame.K_ESCAPE:
+                    if self.game_state.is_playing():
+                        self.game_state.change_state(GameState.PAUSED)
+                    elif self.game_state.is_paused():
+                        self.game_state.change_state(GameState.PLAYING)
+                
+                # Tecla H para mostrar/esconder hitbox (modo de depuração)
+                elif event.key == pygame.K_h:
+                    self.show_hitbox = not self.show_hitbox
+                    print(f"Hitbox {'visível' if self.show_hitbox else 'oculta'}")
     
     def update(self):
         """Atualiza todos os objetos do jogo"""
@@ -179,10 +205,23 @@ class Game:
         
         # Atualiza apenas se estiver jogando
         if self.game_state.is_playing():
+            # Atualiza os sprites (calcula velocidade, mas não move o jogador)
             self.all_sprites.update()
             
-            # Verifica colisões com o mapa
-            self.map.check_collision(self.player)
+            # Move o jogador considerando colisões
+            if self.player:
+                collision = self.player.move_with_collision(self.map.collision_rects)
+                
+                # Registra a colisão no log apenas quando o estado muda e com frequência limitada
+                if collision != self.last_collision_state:
+                    self.collision_log_counter += 1
+                    if self.collision_log_counter >= self.collision_log_frequency:
+                        if collision:
+                            print("Log: Colisão detectada - Caminho bloqueado")
+                        else:
+                            print("Log: Caminho livre")
+                        self.collision_log_counter = 0
+                    self.last_collision_state = collision
             
             # Limita o jogador aos limites do mapa
             map_width = self.map.width * self.map.tile_size
@@ -236,10 +275,16 @@ class Game:
         except Exception as e:
             self.show_error(f"Erro ao mudar de mapa: {e}")
     
-    def show_error(self, message):
-        """Mostra uma mensagem de erro temporária"""
-        print(f"ERRO: {message}")
+    def show_error(self, message, item_id=None, is_dialog=False):
+        """Mostra uma mensagem de erro ou diálogo temporária"""
+        if is_dialog:
+            print(f"DIÁLOGO: {message}")
+        else:
+            print(f"ERRO: {message}")
+        
         self.error_message = message
+        self.error_item_id = item_id
+        self.error_is_dialog = is_dialog
         self.error_timer = 180  # 3 segundos a 60 FPS
     
     def render(self):
@@ -261,6 +306,10 @@ class Game:
             # Desenha todos os sprites
             self.all_sprites.draw(self.screen)
             
+            # Desenha a hitbox do jogador se a opção estiver ativada
+            if self.show_hitbox and self.player:
+                self.player.draw_hitbox(self.screen)
+            
             # Desenha informações do mapa atual
             font = pygame.font.SysFont(None, 24)
             map_text = font.render(f"Mapa: {self.map.name}", True, (255, 255, 255))
@@ -275,18 +324,80 @@ class Game:
             instructions = font.render("Use WASD ou setas para mover, E para interagir com portas, ESC para pausar", True, (255, 255, 255))
             self.screen.blit(instructions, (10, self.HEIGHT - 30))
             
-            # Desenha mensagem de erro, se houver
+            # Desenha mensagem de erro ou diálogo, se houver
             if self.error_message:
-                # Cria um fundo semi-transparente
-                error_bg = pygame.Surface((self.WIDTH, 60))
-                error_bg.fill((200, 0, 0))
-                error_bg.set_alpha(200)
-                self.screen.blit(error_bg, (0, self.HEIGHT // 2 - 30))
-                
-                # Desenha a mensagem de erro
-                error_text = font.render(f"ERRO: {self.error_message}", True, (255, 255, 255))
-                error_rect = error_text.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2))
-                self.screen.blit(error_text, error_rect)
+                if self.error_is_dialog:
+                    # Balão de diálogo na parte inferior direita
+                    dialog_width = min(400, self.WIDTH - 100)
+                    dialog_height = 80
+                    dialog_x = self.WIDTH - dialog_width - 20
+                    dialog_y = self.HEIGHT - dialog_height - 20
+                    
+                    # Cria um fundo para o balão de diálogo
+                    dialog_bg = pygame.Surface((dialog_width, dialog_height))
+                    dialog_bg.fill((240, 240, 255))
+                    dialog_bg.set_alpha(230)
+                    
+                    # Desenha a borda do balão
+                    pygame.draw.rect(self.screen, (100, 100, 200), 
+                                    (dialog_x, dialog_y, dialog_width, dialog_height), 0)
+                    pygame.draw.rect(self.screen, (50, 50, 150), 
+                                    (dialog_x, dialog_y, dialog_width, dialog_height), 2)
+                    
+                    # Desenha o conteúdo do balão
+                    self.screen.blit(dialog_bg, (dialog_x, dialog_y))
+                    
+                    # Desenha a imagem do item, se disponível
+                    if self.error_item_id and self.error_item_id in self.map.images:
+                        # Cria uma miniatura da imagem (32x32)
+                        item_image = self.map.images[self.error_item_id]
+                        item_rect = pygame.Rect(dialog_x + 10, dialog_y + (dialog_height - 32) // 2, 32, 32)
+                        self.screen.blit(item_image, item_rect)
+                        
+                        # Ajusta o texto para começar após a imagem
+                        text_x = dialog_x + 52
+                        text_width = dialog_width - 62
+                    else:
+                        # Sem imagem, texto ocupa todo o espaço
+                        text_x = dialog_x + 10
+                        text_width = dialog_width - 20
+                    
+                    # Renderiza o texto com quebra de linha
+                    words = self.error_message.split(' ')
+                    lines = []
+                    current_line = []
+                    
+                    for word in words:
+                        test_line = ' '.join(current_line + [word])
+                        test_text = font.render(test_line, True, (0, 0, 0))
+                        
+                        if test_text.get_width() <= text_width:
+                            current_line.append(word)
+                        else:
+                            lines.append(' '.join(current_line))
+                            current_line = [word]
+                    
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                    
+                    # Limita a 2 linhas
+                    lines = lines[:2]
+                    
+                    # Desenha as linhas de texto
+                    for i, line in enumerate(lines):
+                        text = font.render(line, True, (0, 0, 0))
+                        self.screen.blit(text, (text_x, dialog_y + 15 + i * 25))
+                else:
+                    # Mensagem de erro (estilo antigo)
+                    error_bg = pygame.Surface((self.WIDTH, 60))
+                    error_bg.fill((200, 0, 0))
+                    error_bg.set_alpha(200)
+                    self.screen.blit(error_bg, (0, self.HEIGHT // 2 - 30))
+                    
+                    # Desenha a mensagem de erro
+                    error_text = font.render(f"ERRO: {self.error_message}", True, (255, 255, 255))
+                    error_rect = error_text.get_rect(center=(self.WIDTH // 2, self.HEIGHT // 2))
+                    self.screen.blit(error_text, error_rect)
             
             # Se estiver pausado, desenha a tela de pausa por cima
             if self.game_state.is_paused():
@@ -328,18 +439,18 @@ class Game:
                             drop_names.append(self.map.item_config["tile_types"][drop_id].get("name", "Item desconhecido"))
                     
                     if drop_names:
-                        self.show_error(f"Você encontrou: {', '.join(drop_names)}")
+                        self.show_error(f"Você encontrou: {', '.join(drop_names)}", obj_id, True)
             
             # Processa NPCs
             elif item_type == "npc":
                 # Mostra diálogo do NPC
                 dialog = details.get("dialog", "...")
                 if dialog:
-                    self.show_error(dialog)
+                    self.show_error(dialog, obj_id, True)
             
             # Processa placas
             elif "sign" in item_config.get("name", "").lower():
                 # Mostra mensagem da placa
                 message = details.get("message", "")
                 if message:
-                    self.show_error(message) 
+                    self.show_error(message, obj_id, True) 
