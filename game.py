@@ -18,10 +18,18 @@ class Game:
         pygame.mixer.init()  # Inicializa o mixer para áudio
         
         # Constantes
-        self.WIDTH = 800
-        self.HEIGHT = 600
+        self.BASE_WIDTH = 800
+        self.BASE_HEIGHT = 600
         self.FPS = 60
         self.TITLE = "Jogo Top-Down"
+        
+        # Carrega o mapa inicial para obter suas dimensões
+        self.current_map_id = "map1"
+        self.map = Map(self.current_map_id)
+        
+        # Ajusta o tamanho da tela com base no tamanho do mapa
+        self.WIDTH = min(1280, self.map.width * self.map.tile_size)
+        self.HEIGHT = min(960, self.map.height * self.map.tile_size)
         
         # Configuração da tela
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -37,10 +45,6 @@ class Game:
         self.title_screen = TitleScreen(self.WIDTH, self.HEIGHT)
         self.character_select = CharacterSelect(self.WIDTH, self.HEIGHT)
         self.pause_screen = PauseScreen(self.WIDTH, self.HEIGHT)
-        
-        # Carrega o mapa inicial
-        self.current_map_id = "map1"
-        self.map = Map(self.current_map_id)
         
         # Carrega objetos do jogo
         self.all_sprites = pygame.sprite.Group()
@@ -67,12 +71,16 @@ class Game:
         
         # Trilha sonora atual
         self.current_soundtrack = None
+        self.soundtrack_warnings_shown = []  # Lista para controlar quais avisos já foram exibidos
         
         # Flag para controlar o loop principal
         self.running = True
+        
+        # Inicializa o jogo
+        self.init_game()
     
-    def start_game(self, character_data=None):
-        """Inicia um novo jogo"""
+    def init_game(self):
+        """Inicializa o jogo"""
         try:
             # Carrega o mapa inicial
             self.current_map_id = "map1"
@@ -83,19 +91,28 @@ class Game:
                 print("Aviso: Mapa inicial não pôde ser carregado corretamente.")
                 self.show_error("Erro ao carregar o mapa inicial. Verifique os arquivos do jogo.")
             
+            # Inicia a trilha sonora do mapa
+            self.play_map_soundtrack()
+        except Exception as e:
+            print(f"Erro ao inicializar o jogo: {e}")
+            self.show_error(f"Erro ao inicializar o jogo: {e}")
+    
+    def start_game(self, character_data=None):
+        """Inicia um novo jogo"""
+        try:
             # Cria o jogador
             self.all_sprites.empty()
             self.player = Player(self.WIDTH // 2, self.HEIGHT // 2, character_data)
             self.all_sprites.add(self.player)
             
+            # Muda o estado do jogo para "jogando"
+            self.game_state.change_state(GameState.PLAYING)
+            
             # Inicia a trilha sonora do mapa
             self.play_map_soundtrack()
-            
-            # Muda para o estado de jogo
-            self.game_state.change_state(GameState.PLAYING)
         except Exception as e:
             print(f"Erro ao iniciar o jogo: {e}")
-            self.show_error("Erro ao iniciar o jogo. Verifique os arquivos do jogo.")
+            self.show_error(f"Erro ao iniciar o jogo: {e}")
     
     def play_map_soundtrack(self):
         """Toca a trilha sonora do mapa atual"""
@@ -108,7 +125,10 @@ class Game:
         # Verifica se o arquivo existe
         full_path = os.path.join("assets", "sounds", soundtrack_path)
         if not os.path.exists(full_path):
-            print(f"Aviso: Arquivo de áudio não encontrado: {full_path}")
+            # Evita mostrar o mesmo aviso várias vezes
+            if full_path not in self.soundtrack_warnings_shown:
+                print(f"Aviso: Arquivo de áudio não encontrado: {full_path}")
+                self.soundtrack_warnings_shown.append(full_path)
             # Não tenta criar o arquivo nem tocar a trilha
             return
             
@@ -121,7 +141,10 @@ class Game:
             if pygame.mixer.music.get_busy() and self.current_soundtrack != soundtrack_path:
                 pygame.mixer.music.stop()
         except Exception as e:
-            print(f"Aviso: Erro ao parar trilha sonora: {e}")
+            # Evita mostrar o mesmo aviso várias vezes
+            if "stop_soundtrack" not in self.soundtrack_warnings_shown:
+                print(f"Aviso: Erro ao parar trilha sonora: {e}")
+                self.soundtrack_warnings_shown.append("stop_soundtrack")
             
         # Carrega e toca a nova trilha sonora
         try:
@@ -129,7 +152,10 @@ class Game:
             pygame.mixer.music.play(-1)  # Loop infinito
             self.current_soundtrack = soundtrack_path
         except Exception as e:
-            print(f"Aviso: Não foi possível tocar trilha sonora {full_path}: {e}")
+            # Evita mostrar o mesmo aviso várias vezes
+            if full_path not in self.soundtrack_warnings_shown:
+                print(f"Aviso: Não foi possível tocar trilha sonora {full_path}: {e}")
+                self.soundtrack_warnings_shown.append(full_path)
             # Se ocorrer um erro, define a trilha atual como None para evitar problemas
             self.current_soundtrack = None
             # Continua a execução do jogo normalmente
@@ -263,9 +289,22 @@ class Game:
             self.current_map_id = map_id
             self.map = Map(map_id)
             
+            # Ajusta o tamanho da tela para o novo mapa
+            self.adjust_screen_size()
+            
             # Posiciona o jogador
-            self.player.rect.x = player_x * self.map.tile_size
-            self.player.rect.y = player_y * self.map.tile_size
+            # Verifica se as coordenadas já estão em pixels ou em unidades de tile
+            if isinstance(player_x, int) and player_x < 100 and isinstance(player_y, int) and player_y < 100:
+                # Coordenadas em unidades de tile, converte para pixels
+                self.player.rect.x = player_x * self.map.tile_size
+                self.player.rect.y = player_y * self.map.tile_size
+            else:
+                # Coordenadas já em pixels
+                self.player.rect.x = player_x
+                self.player.rect.y = player_y
+            
+            # Atualiza a hitbox do jogador
+            self.player.update_hitbox()
             
             # Atualiza a trilha sonora
             self.play_map_soundtrack()
@@ -274,6 +313,37 @@ class Game:
             self.transition_cooldown = 10
         except Exception as e:
             self.show_error(f"Erro ao mudar de mapa: {e}")
+    
+    def adjust_screen_size(self):
+        """Ajusta o tamanho da tela com base no tamanho do mapa atual"""
+        # Calcula o tamanho ideal da tela com base no mapa
+        map_width = self.map.width * self.map.tile_size
+        map_height = self.map.height * self.map.tile_size
+        
+        print(f"Tamanho do mapa: {self.map.width}x{self.map.height} tiles")
+        print(f"Tamanho do tile: {self.map.tile_size}px")
+        print(f"Tamanho do mapa em pixels: {map_width}x{map_height}")
+        
+        # Limita o tamanho máximo da tela para evitar janelas muito grandes
+        new_width = min(1280, map_width)
+        new_height = min(960, map_height)
+        
+        # Verifica se o tamanho da tela precisa ser alterado
+        if new_width != self.WIDTH or new_height != self.HEIGHT:
+            self.WIDTH = new_width
+            self.HEIGHT = new_height
+            
+            # Redimensiona a tela
+            self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
+            
+            # Atualiza as telas do jogo
+            self.title_screen = TitleScreen(self.WIDTH, self.HEIGHT)
+            self.character_select = CharacterSelect(self.WIDTH, self.HEIGHT)
+            self.pause_screen = PauseScreen(self.WIDTH, self.HEIGHT)
+            
+            print(f"Tela redimensionada para {self.WIDTH}x{self.HEIGHT}")
+        else:
+            print(f"Tamanho da tela mantido em {self.WIDTH}x{self.HEIGHT}")
     
     def show_error(self, message, item_id=None, is_dialog=False):
         """Mostra uma mensagem de erro ou diálogo temporária"""
