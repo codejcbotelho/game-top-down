@@ -422,10 +422,15 @@ class Game:
         obj_id = str(obj.get("id", 0))
         details = obj.get("details", {})
         
+        print(f"Processando interação com objeto ID {obj_id}")
+        
         # Verifica o tipo de objeto e processa de acordo
         if obj_id in self.map.item_config.get("tile_types", {}):
             item_config = self.map.item_config["tile_types"][obj_id]
             item_type = item_config.get("type", "")
+            item_name = item_config.get("name", "Objeto desconhecido")
+            
+            print(f"Tipo de objeto: {item_type}, Nome: {item_name}")
             
             # Processa baús
             if item_type == "objeto" and "chest" in item_config.get("name", "").lower():
@@ -443,10 +448,21 @@ class Game:
             
             # Processa NPCs
             elif item_type == "npc":
+                # Obtém o diálogo do NPC
+                # Primeiro verifica nos detalhes do objeto no mapa
+                dialog = details.get("dialog", "")
+                
+                # Se não encontrar, verifica nos detalhes da configuração do item
+                if not dialog and "details" in item_config:
+                    dialog = item_config["details"].get("dialog", "...")
+                
+                print(f"Diálogo do NPC: {dialog}")
+                
                 # Mostra diálogo do NPC
-                dialog = details.get("dialog", "...")
                 if dialog:
                     self.show_error(dialog, obj_id, True)
+                else:
+                    self.show_error(f"{item_name} não tem nada a dizer.", obj_id, True)
             
             # Processa placas
             elif "sign" in item_config.get("name", "").lower():

@@ -139,6 +139,9 @@ class Map:
         # Cria o diretório de sons se não existir
         os.makedirs(os.path.join(base_dir, "effects"), exist_ok=True)
         
+        # Lista para controlar quais avisos já foram exibidos
+        sound_warnings_shown = []
+        
         # Carrega sons para cada tipo de tile na configuração
         for tile_id, tile_info in self.item_config.get("tile_types", {}).items():
             details = tile_info.get("details", {})
@@ -154,14 +157,22 @@ class Map:
                             sound = pygame.mixer.Sound(full_path)
                             self.interaction_sounds[tile_id] = sound
                         except Exception as e:
-                            # Ignora erros ao carregar o som e continua a execução
-                            print(f"Aviso: Não foi possível carregar o som {full_path}: {e}")
+                            # Evita mostrar o mesmo aviso várias vezes
+                            if full_path not in sound_warnings_shown:
+                                print(f"Aviso: Não foi possível carregar o som {full_path}: {e}")
+                                sound_warnings_shown.append(full_path)
                             # Não armazena o som para este item
                     else:
-                        print(f"Aviso: Arquivo de som não encontrado: {full_path}")
+                        # Evita mostrar o mesmo aviso várias vezes
+                        if full_path not in sound_warnings_shown:
+                            print(f"Aviso: Arquivo de som não encontrado: {full_path}")
+                            sound_warnings_shown.append(full_path)
                         # Não tenta criar o arquivo nem armazenar o som
                 except Exception as e:
-                    print(f"Aviso: Erro ao processar som {full_path}: {e}")
+                    # Evita mostrar o mesmo aviso várias vezes
+                    if full_path not in sound_warnings_shown:
+                        print(f"Aviso: Erro ao processar som {full_path}: {e}")
+                        sound_warnings_shown.append(full_path)
                     # Ignora o erro e continua a execução
     
     def load_map(self, map_id):
@@ -496,6 +507,9 @@ class Map:
     
     def check_object_interaction(self, player):
         """Verifica se o jogador está interagindo com um objeto"""
+        # Cria um retângulo de interação um pouco maior que o jogador
+        interaction_rect = player.rect.inflate(10, 10)  # Aumenta a área de interação
+        
         for obj in self.objects:
             obj_id = str(obj.get("id", 0))
             x, y = obj.get("x", 0), obj.get("y", 0)
@@ -508,18 +522,35 @@ class Map:
                 self.tile_size
             )
             
-            # Verifica se o jogador está colidindo com o objeto
-            if player.rect.colliderect(obj_rect):
-                # Toca o som de interação do objeto, se disponível
-                try:
-                    if obj_id in self.interaction_sounds:
-                        self.interaction_sounds[obj_id].play()
-                except Exception as e:
-                    # Ignora erros ao tocar o som
-                    print(f"Aviso: Não foi possível tocar som do objeto {obj_id}: {e}")
+            # Verifica se o jogador está próximo o suficiente para interagir com o objeto
+            if interaction_rect.colliderect(obj_rect):
+                # Verifica se o objeto é interativo
+                is_interactive = False
                 
-                # Retorna o objeto para processamento adicional
-                return obj
+                # Verifica se é um NPC ou outro objeto interativo
+                if obj_id in self.item_config.get("tile_types", {}):
+                    item_config = self.item_config["tile_types"][obj_id]
+                    item_type = item_config.get("type", "")
+                    details = item_config.get("details", {})
+                    
+                    # NPCs e objetos com a propriedade interactive são interativos
+                    if item_type == "npc" or details.get("interactive", False):
+                        is_interactive = True
+                
+                # Se for interativo, processa a interação
+                if is_interactive:
+                    print(f"Interagindo com objeto ID {obj_id}")
+                    
+                    # Toca o som de interação do objeto, se disponível
+                    try:
+                        if obj_id in self.interaction_sounds:
+                            self.interaction_sounds[obj_id].play()
+                    except Exception as e:
+                        # Ignora erros ao tocar o som
+                        print(f"Aviso: Não foi possível tocar som do objeto {obj_id}: {e}")
+                    
+                    # Retorna o objeto para processamento adicional
+                    return obj
         
         return None
     
