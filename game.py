@@ -10,6 +10,7 @@ from game_state import GameState
 from title_screen import TitleScreen
 from character_select import CharacterSelect
 from pause_screen import PauseScreen
+from utils import get_asset_path, get_resource_path
 
 class Game:
     def __init__(self):
@@ -123,13 +124,12 @@ class Game:
             return
             
         # Verifica se o arquivo existe
-        full_path = os.path.join("assets", "sounds", soundtrack_path)
+        full_path = get_resource_path("sounds", soundtrack_path)
         if not os.path.exists(full_path):
             # Evita mostrar o mesmo aviso várias vezes
             if full_path not in self.soundtrack_warnings_shown:
                 print(f"Aviso: Arquivo de áudio não encontrado: {full_path}")
                 self.soundtrack_warnings_shown.append(full_path)
-            # Não tenta criar o arquivo nem tocar a trilha
             return
             
         # Se a trilha sonora for a mesma que já está tocando, não faz nada
@@ -156,9 +156,7 @@ class Game:
             if full_path not in self.soundtrack_warnings_shown:
                 print(f"Aviso: Não foi possível tocar trilha sonora {full_path}: {e}")
                 self.soundtrack_warnings_shown.append(full_path)
-            # Se ocorrer um erro, define a trilha atual como None para evitar problemas
             self.current_soundtrack = None
-            # Continua a execução do jogo normalmente
     
     def process_events(self):
         """Processa os eventos (teclado, mouse, etc)"""
@@ -270,49 +268,47 @@ class Game:
             
             # Verifica transições de borda
             if self.transition_cooldown == 0:
-                edge_transition = self.map.check_edge_transition(self.player)
-                if edge_transition:
-                    self.change_map(edge_transition["target_map"], edge_transition["target_x"], edge_transition["target_y"])
+                target_map, new_x, new_y = self.map.check_edge_transition(self.player)
+                if target_map:
+                    self.change_map(target_map, new_x, new_y)
     
     def change_map(self, map_id, player_x, player_y):
         """Muda para um novo mapa"""
         try:
             # Verifica se o arquivo do mapa existe
-            if not os.path.exists(os.path.join("maps", f"{map_id}.json")):
-                self.show_error(f"Mapa não encontrado: {map_id}")
-                return
-            
-            # Guarda a trilha sonora atual
-            previous_soundtrack = self.current_soundtrack
+            if not os.path.exists(get_resource_path("assets/maps", f"{map_id}.json")):
+                print(f"Erro: Arquivo de mapa não encontrado: {map_id}")
+                return False
             
             # Carrega o novo mapa
             self.current_map_id = map_id
             self.map = Map(map_id)
             
-            # Ajusta o tamanho da tela para o novo mapa
-            self.adjust_screen_size()
-            
-            # Posiciona o jogador
-            # Verifica se as coordenadas já estão em pixels ou em unidades de tile
-            if isinstance(player_x, int) and player_x < 100 and isinstance(player_y, int) and player_y < 100:
-                # Coordenadas em unidades de tile, converte para pixels
-                self.player.rect.x = player_x * self.map.tile_size
-                self.player.rect.y = player_y * self.map.tile_size
-            else:
-                # Coordenadas já em pixels
+            # Atualiza a posição do jogador
+            if self.player:
                 self.player.rect.x = player_x
                 self.player.rect.y = player_y
+                
+                # Ajusta a posição se estiver dentro de uma parede
+                while self.map.check_collision(self.player):
+                    self.player.rect.x += self.player.rect.width
+                    if self.player.rect.right > self.WIDTH:
+                        self.player.rect.x = 0
+                        self.player.rect.y += self.player.rect.height
+                    if self.player.rect.bottom > self.HEIGHT:
+                        self.player.rect.x = self.WIDTH // 2
+                        self.player.rect.y = self.HEIGHT // 2
             
-            # Atualiza a hitbox do jogador
-            self.player.update_hitbox()
+            # Ajusta o tamanho da tela se necessário
+            self.adjust_screen_size()
             
-            # Atualiza a trilha sonora
+            # Inicia a trilha sonora do novo mapa
             self.play_map_soundtrack()
             
-            # Define um cooldown para evitar transições múltiplas
-            self.transition_cooldown = 10
+            return True
         except Exception as e:
-            self.show_error(f"Erro ao mudar de mapa: {e}")
+            print(f"Erro ao mudar de mapa: {e}")
+            return False
     
     def adjust_screen_size(self):
         """Ajusta o tamanho da tela com base no tamanho do mapa atual"""
@@ -489,54 +485,27 @@ class Game:
 
     def process_object_interaction(self, obj):
         """Processa a interação com um objeto"""
-        obj_id = str(obj.get("id", 0))
-        details = obj.get("details", {})
-        
-        print(f"Processando interação com objeto ID {obj_id}")
-        
-        # Verifica o tipo de objeto e processa de acordo
-        if obj_id in self.map.item_config.get("tile_types", {}):
-            item_config = self.map.item_config["tile_types"][obj_id]
-            item_type = item_config.get("type", "")
-            item_name = item_config.get("name", "Objeto desconhecido")
+        try:
+            obj_id = str(obj.get("id", 0))
             
-            print(f"Tipo de objeto: {item_type}, Nome: {item_name}")
-            
-            # Processa baús
-            if item_type == "objeto" and "chest" in item_config.get("name", "").lower():
-                # Mostra mensagem sobre os itens encontrados
-                drops = details.get("drops", [])
-                if drops:
-                    drop_names = []
-                    for drop in drops:
-                        drop_id = drop.replace("item_", "")
-                        if drop_id in self.map.item_config.get("tile_types", {}):
-                            drop_names.append(self.map.item_config["tile_types"][drop_id].get("name", "Item desconhecido"))
+            # Obtém a configuração do objeto
+            if obj_id in self.map.item_config.get("tile_types", {}):
+                item_config = self.map.item_config["tile_types"][obj_id]
+                
+                # Verifica se o objeto é interativo
+                if item_config.get("details", {}).get("interactive", False):
+                    # Processa a mensagem da placa
+                    if "message" in obj.get("details", {}):
+                        self.show_error(obj["details"]["message"], obj_id, True)
                     
-                    if drop_names:
-                        self.show_error(f"Você encontrou: {', '.join(drop_names)}", obj_id, True)
-            
-            # Processa NPCs
-            elif item_type == "npc":
-                # Obtém o diálogo do NPC
-                # Primeiro verifica nos detalhes do objeto no mapa
-                dialog = details.get("dialog", "")
-                
-                # Se não encontrar, verifica nos detalhes da configuração do item
-                if not dialog and "details" in item_config:
-                    dialog = item_config["details"].get("dialog", "...")
-                
-                print(f"Diálogo do NPC: {dialog}")
-                
-                # Mostra diálogo do NPC
-                if dialog:
-                    self.show_error(dialog, obj_id, True)
-                else:
-                    self.show_error(f"{item_name} não tem nada a dizer.", obj_id, True)
-            
-            # Processa placas
-            elif "sign" in item_config.get("name", "").lower():
-                # Mostra mensagem da placa
-                message = details.get("message", "")
-                if message:
-                    self.show_error(message, obj_id, True) 
+                    # Toca o som de interação do objeto, se disponível
+                    if obj_id in self.map.interaction_sounds:
+                        try:
+                            self.map.interaction_sounds[obj_id].play()
+                        except Exception as e:
+                            if obj_id not in self.soundtrack_warnings_shown:
+                                print(f"Aviso: Não foi possível tocar som do objeto {obj_id}: {e}")
+                                self.soundtrack_warnings_shown.append(obj_id)
+        except Exception as e:
+            print(f"Erro ao processar interação com objeto: {e}")
+            self.show_error("Erro ao interagir com o objeto") 

@@ -82,7 +82,6 @@ class Player(pygame.sprite.Sprite):
             # Tecla E para interagir com objetos
             if event.key == pygame.K_e:
                 self.interacting = True
-                print("Tecla E pressionada - Tentando interagir")
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_e:
                 self.interacting = False

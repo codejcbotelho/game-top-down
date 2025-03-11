@@ -4,6 +4,7 @@
 import pygame
 import json
 import os
+from utils import get_asset_path, ensure_dir_exists, get_resource_path
 
 class Map:
     def __init__(self, map_id="map1"):
@@ -38,13 +39,13 @@ class Map:
     def load_item_config(self):
         """Carrega a configuração de itens do arquivo JSON"""
         try:
-            config_path = os.path.join("config", "items.json")
+            config_path = get_asset_path("assets", "config", "items.json")
             if not os.path.exists(config_path):
                 print(f"Aviso: Arquivo de configuração de itens não encontrado: {config_path}")
                 self.item_config = {"tile_types": {}}
                 return
                 
-            with open(config_path, "r") as f:
+            with open(config_path, 'r', encoding='utf-8-sig') as f:
                 self.item_config = json.load(f)
         except Exception as e:
             print(f"Erro ao carregar configuração de itens: {e}")
@@ -52,20 +53,18 @@ class Map:
     
     def load_images(self):
         """Carrega as imagens para os tiles com base na configuração"""
-        base_dir = "assets/images"
-        
         # Cria os diretórios necessários se não existirem
-        os.makedirs(os.path.join(base_dir, "tiles"), exist_ok=True)
-        os.makedirs(os.path.join(base_dir, "objects"), exist_ok=True)
-        os.makedirs(os.path.join(base_dir, "items"), exist_ok=True)
-        os.makedirs(os.path.join(base_dir, "enemies"), exist_ok=True)
-        os.makedirs(os.path.join(base_dir, "npcs"), exist_ok=True)
+        ensure_dir_exists("assets", "images", "tiles")
+        ensure_dir_exists("assets", "images", "objects")
+        ensure_dir_exists("assets", "images", "items")
+        ensure_dir_exists("assets", "images", "enemies")
+        ensure_dir_exists("assets", "images", "npcs")
         
         # Carrega imagens para cada tipo de tile na configuração
         for tile_id, tile_info in self.item_config.get("tile_types", {}).items():
             image_path = tile_info.get("image", "")
             if image_path:
-                full_path = os.path.join(base_dir, image_path)
+                full_path = get_asset_path("assets", "images", image_path)
                 try:
                     if os.path.exists(full_path):
                         # Carrega a imagem e redimensiona para o tamanho do tile
@@ -134,10 +133,8 @@ class Map:
     
     def load_sounds(self):
         """Carrega os sons de interação para os objetos"""
-        base_dir = "assets/sounds"
-        
         # Cria o diretório de sons se não existir
-        os.makedirs(os.path.join(base_dir, "effects"), exist_ok=True)
+        ensure_dir_exists("assets", "sounds", "effects")
         
         # Lista para controlar quais avisos já foram exibidos
         sound_warnings_shown = []
@@ -149,7 +146,7 @@ class Map:
             # Verifica se o item tem som de interação
             if "interaction_sound" in details:
                 sound_path = details["interaction_sound"]
-                full_path = os.path.join(base_dir, sound_path)
+                full_path = get_resource_path("sounds", sound_path)
                 
                 try:
                     if os.path.exists(full_path):
@@ -161,31 +158,28 @@ class Map:
                             if full_path not in sound_warnings_shown:
                                 print(f"Aviso: Não foi possível carregar o som {full_path}: {e}")
                                 sound_warnings_shown.append(full_path)
-                            # Não armazena o som para este item
                     else:
                         # Evita mostrar o mesmo aviso várias vezes
                         if full_path not in sound_warnings_shown:
                             print(f"Aviso: Arquivo de som não encontrado: {full_path}")
                             sound_warnings_shown.append(full_path)
-                        # Não tenta criar o arquivo nem armazenar o som
                 except Exception as e:
                     # Evita mostrar o mesmo aviso várias vezes
                     if full_path not in sound_warnings_shown:
                         print(f"Aviso: Erro ao processar som {full_path}: {e}")
                         sound_warnings_shown.append(full_path)
-                    # Ignora o erro e continua a execução
     
     def load_map(self, map_id):
         """Carrega um mapa a partir de um arquivo JSON"""
         try:
             # Verifica se o arquivo existe
-            map_path = os.path.join("maps", f"{map_id}.json")
+            map_path = get_resource_path("maps", f"{map_id}.json")
             if not os.path.exists(map_path):
                 print(f"Erro: Arquivo de mapa não encontrado: {map_path}")
                 self._create_error_map()
                 return
                 
-            with open(map_path, "r") as f:
+            with open(map_path, 'r', encoding='utf-8-sig') as f:
                 try:
                     map_data = json.load(f)
                 except json.JSONDecodeError as e:
@@ -471,86 +465,38 @@ class Map:
     
     def check_door_interaction(self, player):
         """Verifica se o jogador está interagindo com uma porta"""
-        for door in self.door_rects:
-            if player.rect.colliderect(door["rect"]):
-                # Toca o som de interação da porta, se disponível
-                try:
-                    if "2" in self.interaction_sounds:
-                        self.interaction_sounds["2"].play()
-                except Exception as e:
-                    # Ignora erros ao tocar o som
-                    print(f"Aviso: Não foi possível tocar som de porta: {e}")
-                
-                # Procura o portal correspondente
-                for portal in self.portals:
-                    try:
-                        if portal["x"] == door["x"] and portal["y"] == door["y"]:
-                            # Verifica se o mapa de destino existe
-                            target_map = portal.get("target_map", "map1")
-                            if not os.path.exists(os.path.join("maps", f"{target_map}.json")):
-                                print(f"Aviso: Mapa de destino não encontrado: {target_map}")
-                                return None
+        try:
+            # Obtém a posição do jogador em coordenadas do grid
+            grid_x = player.rect.centerx // self.tile_size
+            grid_y = player.rect.centery // self.tile_size
+            
+            # Verifica se há uma porta na posição
+            if 0 <= grid_x < self.width and 0 <= grid_y < self.height:
+                if self.data[grid_y][grid_x] == 2:  # 2 é o ID da porta
+                    # Procura por um portal nesta posição
+                    for portal in self.portals:
+                        if portal["x"] == grid_x and portal["y"] == grid_y:
+                            return portal
                             
-                            # Verifica se as coordenadas de destino são válidas
-                            target_x = portal.get("target_x", 1)
-                            target_y = portal.get("target_y", 1)
-                            
-                            return {
-                                "target_map": target_map,
-                                "target_x": target_x,
-                                "target_y": target_y
-                            }
-                    except Exception as e:
-                        print(f"Erro ao processar portal: {e}")
+                    print(f"Aviso: Porta encontrada em ({grid_x}, {grid_y}), mas não há portal configurado")
+        except Exception as e:
+            print(f"Erro ao verificar interação com porta: {e}")
         
         return None
     
     def check_object_interaction(self, player):
         """Verifica se o jogador está interagindo com um objeto"""
-        # Cria um retângulo de interação um pouco maior que o jogador
-        interaction_rect = player.rect.inflate(10, 10)  # Aumenta a área de interação
-        
-        for obj in self.objects:
-            obj_id = str(obj.get("id", 0))
-            x, y = obj.get("x", 0), obj.get("y", 0)
+        try:
+            # Obtém a posição do jogador em coordenadas do grid
+            grid_x = player.rect.centerx // self.tile_size
+            grid_y = player.rect.centery // self.tile_size
             
-            # Cria um retângulo para o objeto
-            obj_rect = pygame.Rect(
-                x * self.tile_size, 
-                y * self.tile_size, 
-                self.tile_size, 
-                self.tile_size
-            )
-            
-            # Verifica se o jogador está próximo o suficiente para interagir com o objeto
-            if interaction_rect.colliderect(obj_rect):
-                # Verifica se o objeto é interativo
-                is_interactive = False
-                
-                # Verifica se é um NPC ou outro objeto interativo
-                if obj_id in self.item_config.get("tile_types", {}):
-                    item_config = self.item_config["tile_types"][obj_id]
-                    item_type = item_config.get("type", "")
-                    details = item_config.get("details", {})
-                    
-                    # NPCs e objetos com a propriedade interactive são interativos
-                    if item_type == "npc" or details.get("interactive", False):
-                        is_interactive = True
-                
-                # Se for interativo, processa a interação
-                if is_interactive:
-                    print(f"Interagindo com objeto ID {obj_id}")
-                    
-                    # Toca o som de interação do objeto, se disponível
-                    try:
-                        if obj_id in self.interaction_sounds:
-                            self.interaction_sounds[obj_id].play()
-                    except Exception as e:
-                        # Ignora erros ao tocar o som
-                        print(f"Aviso: Não foi possível tocar som do objeto {obj_id}: {e}")
-                    
-                    # Retorna o objeto para processamento adicional
+            # Verifica se há um objeto na posição
+            for obj in self.objects:
+                if obj["x"] == grid_x and obj["y"] == grid_y:
                     return obj
+        except Exception as e:
+            print(f"Erro ao verificar interação com objeto: {e}")
         
         return None
     
@@ -563,16 +509,14 @@ class Map:
                 target_map = transition.get("target_map", "map1")
                 
                 # Verifica se o mapa de destino existe
-                if not os.path.exists(os.path.join("maps", f"{target_map}.json")):
-                    print(f"Aviso: Mapa de destino não encontrado: {target_map}")
-                    return None
+                if target_map:
+                    if not os.path.exists(get_resource_path("maps", f"{target_map}.json")):
+                        print(f"Aviso: Mapa de destino não encontrado: {target_map}")
+                        return None, None, None
                 
-                return {
-                    "direction": "left",
-                    "target_map": target_map,
-                    "target_x": transition.get("player_x", 23) * self.tile_size,
-                    "target_y": player.rect.y if transition.get("player_y") == "same" else transition.get("player_y", 10) * self.tile_size
-                }
+                new_x = transition.get("player_x", 23) * self.tile_size
+                new_y = player.rect.y if transition.get("player_y") == "same" else transition.get("player_y", 10) * self.tile_size
+                return target_map, new_x, new_y
             
             # Borda direita
             if player.rect.right >= self.width * self.tile_size and self.edge_transitions.get("right"):
@@ -580,16 +524,14 @@ class Map:
                 target_map = transition.get("target_map", "map1")
                 
                 # Verifica se o mapa de destino existe
-                if not os.path.exists(os.path.join("maps", f"{target_map}.json")):
-                    print(f"Aviso: Mapa de destino não encontrado: {target_map}")
-                    return None
+                if target_map:
+                    if not os.path.exists(get_resource_path("maps", f"{target_map}.json")):
+                        print(f"Aviso: Mapa de destino não encontrado: {target_map}")
+                        return None, None, None
                 
-                return {
-                    "direction": "right",
-                    "target_map": target_map,
-                    "target_x": transition.get("player_x", 1) * self.tile_size,
-                    "target_y": player.rect.y if transition.get("player_y") == "same" else transition.get("player_y", 10) * self.tile_size
-                }
+                new_x = transition.get("player_x", 1) * self.tile_size
+                new_y = player.rect.y if transition.get("player_y") == "same" else transition.get("player_y", 10) * self.tile_size
+                return target_map, new_x, new_y
             
             # Borda superior
             if player.rect.top <= 0 and self.edge_transitions.get("top"):
@@ -597,16 +539,14 @@ class Map:
                 target_map = transition.get("target_map", "map1")
                 
                 # Verifica se o mapa de destino existe
-                if not os.path.exists(os.path.join("maps", f"{target_map}.json")):
-                    print(f"Aviso: Mapa de destino não encontrado: {target_map}")
-                    return None
+                if target_map:
+                    if not os.path.exists(get_resource_path("maps", f"{target_map}.json")):
+                        print(f"Aviso: Mapa de destino não encontrado: {target_map}")
+                        return None, None, None
                 
-                return {
-                    "direction": "top",
-                    "target_map": target_map,
-                    "target_x": player.rect.x if transition.get("player_x") == "same" else transition.get("player_x", 12) * self.tile_size,
-                    "target_y": transition.get("player_y", 17) * self.tile_size
-                }
+                new_x = player.rect.x if transition.get("player_x") == "same" else transition.get("player_x", 12) * self.tile_size
+                new_y = transition.get("player_y", 17) * self.tile_size
+                return target_map, new_x, new_y
             
             # Borda inferior
             if player.rect.bottom >= self.height * self.tile_size and self.edge_transitions.get("bottom"):
@@ -614,21 +554,20 @@ class Map:
                 target_map = transition.get("target_map", "map1")
                 
                 # Verifica se o mapa de destino existe
-                if not os.path.exists(os.path.join("maps", f"{target_map}.json")):
-                    print(f"Aviso: Mapa de destino não encontrado: {target_map}")
-                    return None
+                if target_map:
+                    if not os.path.exists(get_resource_path("maps", f"{target_map}.json")):
+                        print(f"Aviso: Mapa de destino não encontrado: {target_map}")
+                        return None, None, None
                 
-                return {
-                    "direction": "bottom",
-                    "target_map": target_map,
-                    "target_x": player.rect.x if transition.get("player_x") == "same" else transition.get("player_x", 12) * self.tile_size,
-                    "target_y": transition.get("player_y", 1) * self.tile_size
-                }
+                new_x = player.rect.x if transition.get("player_x") == "same" else transition.get("player_x", 12) * self.tile_size
+                new_y = transition.get("player_y", 1) * self.tile_size
+                return target_map, new_x, new_y
+            
         except (KeyError, TypeError, AttributeError) as e:
             print(f"Erro ao verificar transição de borda: {e}")
             
-        return None 
-
+        return None, None, None
+    
     def get_soundtrack_path(self):
         """Retorna o caminho da trilha sonora do mapa"""
         return self.soundtrack_path 

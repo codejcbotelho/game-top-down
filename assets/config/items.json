@@ -1,0 +1,36 @@
+{
+    "tile_types": {
+        "0": {
+            "name": "Vazio",
+            "type": "terreno",
+            "collision": false,
+            "image": "tiles/empty.png"
+        },
+        "1": {
+            "name": "Parede",
+            "type": "terreno",
+            "collision": true,
+            "image": "tiles/wall.png"
+        },
+        "2": {
+            "name": "Porta",
+            "type": "objeto",
+            "collision": false,
+            "image": "objects/door.png",
+            "details": {
+                "interactive": true,
+                "interaction_sound": "effects/door.wav"
+            }
+        },
+        "12": {
+            "name": "Placa",
+            "type": "objeto",
+            "collision": false,
+            "image": "objects/sign.png",
+            "details": {
+                "interactive": true,
+                "interaction_sound": "effects/sign.wav"
+            }
+        }
+    }
+}

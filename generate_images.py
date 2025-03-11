@@ -6,6 +6,7 @@ import os
 import json
 import random
 import math
+from utils import get_asset_path, ensure_dir_exists
 
 # Inicializa o pygame
 pygame.init()
@@ -23,229 +24,332 @@ os.makedirs(os.path.join(BASE_DIR, "items"), exist_ok=True)
 os.makedirs(os.path.join(BASE_DIR, "enemies"), exist_ok=True)
 os.makedirs(os.path.join(BASE_DIR, "npcs"), exist_ok=True)
 
-# Função para criar uma imagem básica
-def create_image(color, filename, details=None):
-    surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
-    surface.fill(color)
+def create_image(color, path, size=(32, 32), pattern=None, text=None):
+    """
+    Cria uma imagem colorida com um padrão opcional
     
-    # Adiciona detalhes específicos se fornecidos
-    if details:
-        if "pattern" in details:
-            if details["pattern"] == "grid":
-                # Desenha uma grade
-                for x in range(0, TILE_SIZE, 8):
-                    pygame.draw.line(surface, details["line_color"], (x, 0), (x, TILE_SIZE), 1)
-                for y in range(0, TILE_SIZE, 8):
-                    pygame.draw.line(surface, details["line_color"], (0, y), (TILE_SIZE, y), 1)
-            elif details["pattern"] == "circle":
-                # Desenha um círculo
-                pygame.draw.circle(surface, details["circle_color"], 
-                                  (TILE_SIZE // 2, TILE_SIZE // 2), 
-                                  details["radius"])
-            elif details["pattern"] == "rect":
-                # Desenha um retângulo
-                rect = pygame.Rect(details["rect_x"], details["rect_y"], 
-                                  details["rect_width"], details["rect_height"])
-                pygame.draw.rect(surface, details["rect_color"], rect)
+    Args:
+        color (tuple): Cor RGB da imagem
+        path (str): Caminho onde salvar a imagem
+        size (tuple): Tamanho da imagem em pixels
+        pattern (str): Tipo de padrão a ser desenhado ('grid', 'diagonal', etc)
+        text (str): Texto opcional para adicionar à imagem
+    """
+    # Cria o diretório se não existir
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    
+    # Cria a superfície e preenche com a cor base
+    img = pygame.Surface(size)
+    img.fill(color)
+    
+    # Adiciona padrão se especificado
+    if pattern == 'grid':
+        for x in range(0, size[0], 8):
+            pygame.draw.line(img, (0, 0, 0), (x, 0), (x, size[1]), 1)
+        for y in range(0, size[1], 8):
+            pygame.draw.line(img, (0, 0, 0), (0, y), (size[0], y), 1)
+    elif pattern == 'diagonal':
+        for i in range(-size[1], size[0], 8):
+            pygame.draw.line(img, (0, 0, 0), (i, 0), (i + size[1], size[1]), 1)
+    
+    # Adiciona texto se especificado
+    if text:
+        try:
+            font = pygame.font.SysFont('Arial', 12)
+            text_surface = font.render(text, True, (0, 0, 0))
+            text_rect = text_surface.get_rect(center=(size[0]//2, size[1]//2))
+            img.blit(text_surface, text_rect)
+        except:
+            # Se não conseguir renderizar texto, desenha um padrão simples
+            pygame.draw.rect(img, (0, 0, 0), (4, 4, size[0]-8, size[1]-8), 2)
     
     # Salva a imagem
-    pygame.image.save(surface, filename)
-    print(f"Imagem '{filename}' criada com sucesso!")
+    pygame.image.save(img, path)
 
-# Função para criar imagens animadas
-def create_animated_images(base_color, filename_base, num_frames, details=None):
+def create_animated_images(color, base_path, num_frames, size=(32, 32), pattern=None):
+    """
+    Cria uma sequência de imagens para animação
+    
+    Args:
+        color (tuple): Cor RGB base
+        base_path (str): Caminho base para salvar as imagens
+        num_frames (int): Número de frames na animação
+        size (tuple): Tamanho de cada frame em pixels
+        pattern (str): Tipo de padrão a ser desenhado
+    """
+    # Cria o diretório se não existir
+    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    
     for i in range(num_frames):
-        surface = pygame.Surface((TILE_SIZE, TILE_SIZE))
+        # Calcula cor variante para este frame
+        frame_color = list(color)
+        variation = int(20 * (i / (num_frames - 1) - 0.5))  # -10 a +10
+        frame_color = [min(255, max(0, c + variation)) for c in frame_color]
         
-        # Cor base com variação para animação
-        color_variation = 20 * math.sin(i * math.pi / num_frames)
-        r = max(0, min(255, base_color[0] + color_variation))
-        g = max(0, min(255, base_color[1] + color_variation))
-        b = max(0, min(255, base_color[2] + color_variation))
-        
-        surface.fill((r, g, b))
-        
-        # Adiciona detalhes específicos se fornecidos
-        if details:
-            if "pattern" in details:
-                if details["pattern"] == "wave":
-                    # Desenha uma onda
-                    for x in range(TILE_SIZE):
-                        y = int(TILE_SIZE // 2 + 5 * math.sin((x + i * 5) * math.pi / 16))
-                        pygame.draw.line(surface, details["line_color"], (x, y), (x, TILE_SIZE), 1)
-                elif details["pattern"] == "sparkle":
-                    # Desenha brilhos
-                    for _ in range(5):
-                        x = random.randint(4, TILE_SIZE - 4)
-                        y = random.randint(4, TILE_SIZE - 4)
-                        size = random.randint(1, 3)
-                        pygame.draw.circle(surface, details["sparkle_color"], (x, y), size)
-        
-        # Salva a imagem
-        filename = f"{filename_base}_{i}.png"
-        pygame.image.save(surface, filename)
-        print(f"Imagem '{filename}' criada com sucesso!")
+        # Cria o frame
+        frame_path = f"{base_path}_{i}.png"
+        create_image(tuple(frame_color), frame_path, size, pattern)
 
 # Gera imagens para os tiles de terreno
 def generate_terrain_tiles():
     # Tile vazio (0)
-    create_image((100, 200, 100), os.path.join(BASE_DIR, "tiles", "empty.png"))
+    create_image(
+        (100, 200, 100),
+        get_asset_path("assets", "images", "tiles", "empty.png"),
+        text="Empty"
+    )
     
     # Parede (1)
-    create_image((100, 100, 100), os.path.join(BASE_DIR, "tiles", "wall.png"), 
-                {"pattern": "grid", "line_color": (80, 80, 80)})
+    create_image(
+        (100, 100, 100),
+        get_asset_path("assets", "images", "tiles", "wall.png"),
+        pattern='grid',
+        text="Wall"
+    )
     
     # Água (5) - animada
-    create_animated_images((100, 150, 255), os.path.join(BASE_DIR, "tiles", "water"), 4,
-                         {"pattern": "wave", "line_color": (80, 130, 255)})
+    create_animated_images(
+        (100, 150, 255),
+        get_asset_path("assets", "images", "tiles", "water"),
+        4,
+        pattern='diagonal'
+    )
     
     # Grama Alta (6) - animada
-    create_animated_images((70, 180, 70), os.path.join(BASE_DIR, "tiles", "tall_grass"), 3,
-                         {"pattern": "wave", "line_color": (50, 160, 50)})
+    create_animated_images(
+        (70, 180, 70),
+        get_asset_path("assets", "images", "tiles", "tall_grass"),
+        3,
+        pattern='diagonal'
+    )
 
 # Gera imagens para os objetos
 def generate_objects():
     # Porta (2)
-    create_image((150, 75, 0), os.path.join(BASE_DIR, "objects", "door.png"),
-                {"pattern": "rect", "rect_x": 8, "rect_y": 4, 
-                 "rect_width": 16, "rect_height": 24, "rect_color": (120, 60, 0)})
+    create_image(
+        (150, 75, 0),
+        get_asset_path("assets", "images", "objects", "door.png"),
+        text="Door"
+    )
     
     # Porta animada
-    create_animated_images((150, 75, 0), os.path.join(BASE_DIR, "objects", "door"), 4,
-                         {"pattern": "rect", "rect_x": 8, "rect_y": 4, 
-                          "rect_width": 16, "rect_height": 24, "rect_color": (120, 60, 0)})
+    create_animated_images(
+        (150, 75, 0),
+        get_asset_path("assets", "images", "objects", "door"),
+        4,
+        pattern='grid'
+    )
     
     # Árvore (3)
-    create_image((50, 120, 50), os.path.join(BASE_DIR, "objects", "tree.png"),
-                {"pattern": "rect", "rect_x": 12, "rect_y": 16, 
-                 "rect_width": 8, "rect_height": 16, "rect_color": (100, 50, 0)})
+    create_image(
+        (50, 120, 50),
+        get_asset_path("assets", "images", "objects", "tree.png"),
+        text="Tree"
+    )
     
     # Árvore animada
-    create_animated_images((50, 120, 50), os.path.join(BASE_DIR, "objects", "tree"), 2,
-                         {"pattern": "rect", "rect_x": 12, "rect_y": 16, 
-                          "rect_width": 8, "rect_height": 16, "rect_color": (100, 50, 0)})
+    create_animated_images(
+        (50, 120, 50),
+        get_asset_path("assets", "images", "objects", "tree"),
+        2,
+        pattern='diagonal'
+    )
     
     # Arbusto (4)
-    create_image((30, 150, 30), os.path.join(BASE_DIR, "objects", "bush.png"),
-                {"pattern": "circle", "circle_color": (20, 120, 20), "radius": 10})
+    create_image(
+        (30, 150, 30),
+        get_asset_path("assets", "images", "objects", "bush.png"),
+        text="Bush"
+    )
     
     # Baú (9)
-    create_image((150, 100, 50), os.path.join(BASE_DIR, "objects", "chest.png"),
-                {"pattern": "rect", "rect_x": 8, "rect_y": 12, 
-                 "rect_width": 16, "rect_height": 12, "rect_color": (120, 80, 40)})
+    create_image(
+        (150, 100, 50),
+        get_asset_path("assets", "images", "objects", "chest.png"),
+        text="Chest"
+    )
     
     # Baú animado
-    create_animated_images((150, 100, 50), os.path.join(BASE_DIR, "objects", "chest"), 3,
-                         {"pattern": "rect", "rect_x": 8, "rect_y": 12, 
-                          "rect_width": 16, "rect_height": 12, "rect_color": (120, 80, 40)})
+    create_animated_images(
+        (150, 100, 50),
+        get_asset_path("assets", "images", "objects", "chest"),
+        3,
+        pattern='grid'
+    )
     
     # Porta Trancada (11)
-    create_image((100, 50, 0), os.path.join(BASE_DIR, "objects", "door_locked.png"),
-                {"pattern": "rect", "rect_x": 8, "rect_y": 4, 
-                 "rect_width": 16, "rect_height": 24, "rect_color": (80, 40, 0)})
+    create_image(
+        (100, 50, 0),
+        get_asset_path("assets", "images", "objects", "door_locked.png"),
+        text="Locked"
+    )
     
     # Porta Trancada animada
-    create_animated_images((100, 50, 0), os.path.join(BASE_DIR, "objects", "door_locked"), 5,
-                         {"pattern": "rect", "rect_x": 8, "rect_y": 4, 
-                          "rect_width": 16, "rect_height": 24, "rect_color": (80, 40, 0)})
+    create_animated_images(
+        (100, 50, 0),
+        get_asset_path("assets", "images", "objects", "door_locked"),
+        5,
+        pattern='grid'
+    )
     
     # Placa (12)
-    create_image((120, 80, 40), os.path.join(BASE_DIR, "objects", "sign.png"),
-                {"pattern": "rect", "rect_x": 12, "rect_y": 16, 
-                 "rect_width": 8, "rect_height": 12, "rect_color": (100, 60, 20)})
+    create_image(
+        (120, 80, 40),
+        get_asset_path("assets", "images", "objects", "sign.png"),
+        text="Sign"
+    )
     
     # Escada para Baixo (40)
-    create_image((80, 80, 80), os.path.join(BASE_DIR, "objects", "stairs_down.png"),
-                {"pattern": "rect", "rect_x": 8, "rect_y": 8, 
-                 "rect_width": 16, "rect_height": 16, "rect_color": (60, 60, 60)})
+    create_image(
+        (80, 80, 80),
+        get_asset_path("assets", "images", "objects", "stairs_down.png"),
+        text="Down"
+    )
     
     # Escada para Cima (41)
-    create_image((100, 100, 100), os.path.join(BASE_DIR, "objects", "stairs_up.png"),
-                {"pattern": "rect", "rect_x": 8, "rect_y": 8, 
-                 "rect_width": 16, "rect_height": 16, "rect_color": (120, 120, 120)})
+    create_image(
+        (100, 100, 100),
+        get_asset_path("assets", "images", "objects", "stairs_up.png"),
+        text="Up"
+    )
     
     # Portal (42)
-    create_image((150, 50, 200), os.path.join(BASE_DIR, "objects", "portal.png"),
-                {"pattern": "circle", "circle_color": (200, 100, 255), "radius": 12})
+    create_image(
+        (150, 50, 200),
+        get_asset_path("assets", "images", "objects", "portal.png"),
+        text="Portal"
+    )
     
     # Portal animado
-    create_animated_images((150, 50, 200), os.path.join(BASE_DIR, "objects", "portal"), 8,
-                         {"pattern": "sparkle", "sparkle_color": (255, 200, 255)})
+    create_animated_images(
+        (150, 50, 200),
+        get_asset_path("assets", "images", "objects", "portal"),
+        8,
+        pattern='diagonal'
+    )
 
 # Gera imagens para os itens
 def generate_items():
     # Moeda (7)
-    create_image((255, 215, 0), os.path.join(BASE_DIR, "items", "coin.png"),
-                {"pattern": "circle", "circle_color": (255, 255, 0), "radius": 8})
+    create_image(
+        (255, 215, 0),
+        get_asset_path("assets", "images", "items", "coin.png"),
+        text="Coin"
+    )
     
     # Moeda animada
-    create_animated_images((255, 215, 0), os.path.join(BASE_DIR, "items", "coin"), 6,
-                         {"pattern": "sparkle", "sparkle_color": (255, 255, 200)})
+    create_animated_images(
+        (255, 215, 0),
+        get_asset_path("assets", "images", "items", "coin"),
+        6
+    )
     
     # Poção de Vida (8)
-    create_image((200, 0, 0), os.path.join(BASE_DIR, "items", "health_potion.png"),
-                {"pattern": "rect", "rect_x": 10, "rect_y": 8, 
-                 "rect_width": 12, "rect_height": 16, "rect_color": (255, 0, 0)})
+    create_image(
+        (200, 0, 0),
+        get_asset_path("assets", "images", "items", "health_potion.png"),
+        text="HP"
+    )
     
     # Poção de Vida animada
-    create_animated_images((200, 0, 0), os.path.join(BASE_DIR, "items", "health_potion"), 4,
-                         {"pattern": "sparkle", "sparkle_color": (255, 100, 100)})
+    create_animated_images(
+        (200, 0, 0),
+        get_asset_path("assets", "images", "items", "health_potion"),
+        4,
+        pattern='diagonal'
+    )
     
     # Chave (10)
-    create_image((200, 200, 0), os.path.join(BASE_DIR, "items", "key.png"),
-                {"pattern": "rect", "rect_x": 12, "rect_y": 12, 
-                 "rect_width": 8, "rect_height": 8, "rect_color": (255, 255, 0)})
+    create_image(
+        (200, 200, 0),
+        get_asset_path("assets", "images", "items", "key.png"),
+        text="Key"
+    )
     
     # Chave animada
-    create_animated_images((200, 200, 0), os.path.join(BASE_DIR, "items", "key"), 4,
-                         {"pattern": "sparkle", "sparkle_color": (255, 255, 100)})
+    create_animated_images(
+        (200, 200, 0),
+        get_asset_path("assets", "images", "items", "key"),
+        4,
+        pattern='diagonal'
+    )
 
 # Gera imagens para os inimigos
 def generate_enemies():
     # Slime (20)
-    create_image((0, 200, 0), os.path.join(BASE_DIR, "enemies", "slime.png"),
-                {"pattern": "circle", "circle_color": (0, 150, 0), "radius": 10})
+    create_image(
+        (0, 200, 0),
+        get_asset_path("assets", "images", "enemies", "slime.png"),
+        text="Slime"
+    )
     
     # Slime animado
-    create_animated_images((0, 200, 0), os.path.join(BASE_DIR, "enemies", "slime"), 4,
-                         {"pattern": "wave", "line_color": (0, 150, 0)})
+    create_animated_images(
+        (0, 200, 0),
+        get_asset_path("assets", "images", "enemies", "slime"),
+        4
+    )
     
     # Morcego (21)
-    create_image((50, 50, 50), os.path.join(BASE_DIR, "enemies", "bat.png"),
-                {"pattern": "circle", "circle_color": (100, 100, 100), "radius": 8})
+    create_image(
+        (50, 50, 50),
+        get_asset_path("assets", "images", "enemies", "bat.png"),
+        text="Bat"
+    )
     
     # Morcego animado
-    create_animated_images((50, 50, 50), os.path.join(BASE_DIR, "enemies", "bat"), 4,
-                         {"pattern": "sparkle", "sparkle_color": (100, 100, 100)})
+    create_animated_images(
+        (50, 50, 50),
+        get_asset_path("assets", "images", "enemies", "bat"),
+        4
+    )
     
     # Esqueleto (22)
-    create_image((200, 200, 200), os.path.join(BASE_DIR, "enemies", "skeleton.png"),
-                {"pattern": "rect", "rect_x": 10, "rect_y": 6, 
-                 "rect_width": 12, "rect_height": 20, "rect_color": (150, 150, 150)})
+    create_image(
+        (200, 200, 200),
+        get_asset_path("assets", "images", "enemies", "skeleton.png"),
+        text="Skeleton"
+    )
     
     # Esqueleto animado
-    create_animated_images((200, 200, 200), os.path.join(BASE_DIR, "enemies", "skeleton"), 6,
-                         {"pattern": "sparkle", "sparkle_color": (150, 150, 150)})
+    create_animated_images(
+        (200, 200, 200),
+        get_asset_path("assets", "images", "enemies", "skeleton"),
+        6,
+        pattern='grid'
+    )
 
 # Gera imagens para os NPCs
 def generate_npcs():
     # NPC Aldeão (30)
-    create_image((0, 100, 200), os.path.join(BASE_DIR, "npcs", "villager.png"),
-                {"pattern": "rect", "rect_x": 10, "rect_y": 6, 
-                 "rect_width": 12, "rect_height": 20, "rect_color": (0, 80, 150)})
+    create_image(
+        (0, 100, 200),
+        get_asset_path("assets", "images", "npcs", "villager.png"),
+        text="Villager"
+    )
     
     # NPC Aldeão animado
-    create_animated_images((0, 100, 200), os.path.join(BASE_DIR, "npcs", "villager"), 2,
-                         {"pattern": "sparkle", "sparkle_color": (0, 150, 255)})
+    create_animated_images(
+        (0, 100, 200),
+        get_asset_path("assets", "images", "npcs", "villager"),
+        2,
+        pattern='grid'
+    )
     
     # NPC Comerciante (31)
-    create_image((200, 100, 0), os.path.join(BASE_DIR, "npcs", "merchant.png"),
-                {"pattern": "rect", "rect_x": 10, "rect_y": 6, 
-                 "rect_width": 12, "rect_height": 20, "rect_color": (150, 80, 0)})
+    create_image(
+        (200, 100, 0),
+        get_asset_path("assets", "images", "npcs", "merchant.png"),
+        text="Merchant"
+    )
     
     # NPC Comerciante animado
-    create_animated_images((200, 100, 0), os.path.join(BASE_DIR, "npcs", "merchant"), 2,
-                         {"pattern": "sparkle", "sparkle_color": (255, 150, 0)})
+    create_animated_images(
+        (200, 100, 0),
+        get_asset_path("assets", "images", "npcs", "merchant"),
+        2,
+        pattern='grid'
+    )
 
 # Gera todas as imagens
 def generate_all_images():
