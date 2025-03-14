@@ -87,6 +87,7 @@
       "type": "item",
       "collision": false,
       "image": "items/coin.png",
+      "price": 1,
       "details": {
         "collectible": true,
         "value": 1,
@@ -101,6 +102,7 @@
       "type": "item",
       "collision": false,
       "image": "items/health_potion.png",
+      "price": 5,
       "details": {
         "collectible": true,
         "health_restore": 20,
@@ -129,6 +131,7 @@
       "type": "item",
       "collision": false,
       "image": "items/key.png",
+      "price": 15,
       "details": {
         "collectible": true,
         "opens": ["door_locked"],

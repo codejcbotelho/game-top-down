@@ -20,6 +20,10 @@ class Player(pygame.sprite.Sprite):
             self.color = character_data.get("color", (0, 0, 255))
             self.speed = character_data.get("speed", 5)
         
+        # Sistema de moedas
+        self.coins = 10  # Jogador começa com 10 moedas
+        self.inventory = []  # Inventário do jogador
+        
         # Cria uma imagem para o jogador
         self.image = pygame.Surface((32, 32))
         self.image.fill(self.color)
@@ -109,6 +113,26 @@ class Player(pygame.sprite.Sprite):
         """Atualiza a posição da hitbox para centralizar com o sprite"""
         # A hitbox é o próprio retângulo do sprite
         self.hitbox = self.rect
+    
+    def add_coins(self, amount):
+        """Adiciona moedas ao jogador"""
+        self.coins += amount
+        return self.coins
+    
+    def remove_coins(self, amount):
+        """Remove moedas do jogador se tiver saldo suficiente"""
+        if self.coins >= amount:
+            self.coins -= amount
+            return True
+        return False
+    
+    def add_item_to_inventory(self, item_id):
+        """Adiciona um item ao inventário do jogador"""
+        self.inventory.append(item_id)
+        
+    def has_item(self, item_id):
+        """Verifica se o jogador possui um determinado item"""
+        return item_id in self.inventory
     
     def draw_hitbox(self, screen):
         """Desenha a hitbox do jogador para depuração"""
