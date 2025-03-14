@@ -15,6 +15,7 @@ class TitleScreen:
         # Botões
         self.buttons = [
             {"text": "Iniciar Jogo", "action": "start_game"},
+            {"text": "Ajuda", "action": "help"},
             {"text": "Sair", "action": "quit"}
         ]
         

@@ -249,7 +249,15 @@ class Game:
                         self.collision_log_counter = 0
                     self.last_collision_state = collision
             
-            # Limita o jogador aos limites do mapa
+            # Verifica transições de borda ANTES de restringir o jogador
+            if self.transition_cooldown == 0:
+                edge_transition = self.map.check_edge_transition(self.player)
+                if edge_transition:
+                    self.change_map(edge_transition["target_map"], edge_transition["target_x"], edge_transition["target_y"])
+                    # Retorna para não continuar processando o resto do frame após a transição
+                    return
+            
+            # Limita o jogador aos limites do mapa apenas se não houve transição
             map_width = self.map.width * self.map.tile_size
             map_height = self.map.height * self.map.tile_size
             self.player.constrain_to_map(map_width, map_height)
@@ -267,12 +275,6 @@ class Game:
                         # Processa a interação com o objeto
                         self.process_object_interaction(obj)
                         self.player.interacting = False
-            
-            # Verifica transições de borda
-            if self.transition_cooldown == 0:
-                edge_transition = self.map.check_edge_transition(self.player)
-                if edge_transition:
-                    self.change_map(edge_transition["target_map"], edge_transition["target_x"], edge_transition["target_y"])
     
     def change_map(self, map_id, player_x, player_y):
         """Muda para um novo mapa"""

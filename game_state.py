@@ -7,6 +7,7 @@ class GameState:
     CHARACTER_SELECT = 1
     PLAYING = 2
     PAUSED = 3
+    HELP_SCREEN = 4
     
     def __init__(self):
         self.current_state = self.TITLE_SCREEN
@@ -38,4 +39,8 @@ class GameState:
     
     def is_paused(self):
         """Verifica se está pausado"""
-        return self.current_state == self.PAUSED 
+        return self.current_state == self.PAUSED
+        
+    def is_help_screen(self):
+        """Verifica se está na tela de ajuda"""
+        return self.current_state == self.HELP_SCREEN 
