@@ -12,6 +12,7 @@ class GameState:
     DIALOG = 6  # Diálogo simples (não interativo)
     INTERACTIVE_DIALOG = 7  # Diálogo interativo (com escolhas)
     INVENTORY = 8  # Inventário do jogador
+    SELLING = 9  # Vendendo itens para NPCs
     
     def __init__(self):
         self.current_state = self.TITLE_SCREEN
@@ -65,6 +66,10 @@ class GameState:
         """Verifica se está exibindo o inventário"""
         return self.current_state == self.INVENTORY
         
+    def is_selling(self):
+        """Verifica se está vendendo itens para NPCs"""
+        return self.current_state == self.SELLING
+        
     def is_any_dialog(self):
         """Verifica se está em qualquer tipo de diálogo"""
-        return self.is_dialog() or self.is_interactive_dialog() or self.is_shopping() or self.is_inventory() 
+        return self.is_dialog() or self.is_interactive_dialog() or self.is_shopping() or self.is_inventory() or self.is_selling() 

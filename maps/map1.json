@@ -97,7 +97,14 @@
       "details": {
         "dialog": "Tenho itens para vender! Quer dar uma olhada?",
         "shop": true,
-        "items_for_sale": ["item_8", "item_10", "item_12"]
+        "items_for_sale": ["item_8", "item_10", "item_12"],
+        "buyer": true,
+        "buyer_dialog": "Estou interessado em comprar alguns itens. O que você tem para vender?",
+        "buy_prices": {
+          "item_8": 3,
+          "item_10": 8,
+          "item_12": 2
+        }
       }
     },
     {

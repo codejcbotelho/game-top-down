@@ -117,6 +117,7 @@ class Player(pygame.sprite.Sprite):
     def add_coins(self, amount):
         """Adiciona moedas ao jogador"""
         self.coins += amount
+        print(f"Adicionadas {amount} moedas. Total: {self.coins}")
         return self.coins
     
     def remove_coins(self, amount):
@@ -128,8 +129,20 @@ class Player(pygame.sprite.Sprite):
     
     def add_item_to_inventory(self, item_id):
         """Adiciona um item ao inventário do jogador"""
-        self.inventory.append(item_id)
+        if not hasattr(self, 'inventory'):
+            self.inventory = []
         
+        self.inventory.append(item_id)
+        print(f"Item {item_id} adicionado ao inventário do jogador. Total: {len(self.inventory)}")
+    
+    def remove_item_from_inventory(self, item_id):
+        """Remove um item do inventário do jogador"""
+        if hasattr(self, 'inventory') and item_id in self.inventory:
+            self.inventory.remove(item_id)
+            print(f"Item {item_id} removido do inventário do jogador. Total: {len(self.inventory)}")
+            return True
+        return False
+    
     def has_item(self, item_id):
         """Verifica se o jogador possui um determinado item"""
         return item_id in self.inventory

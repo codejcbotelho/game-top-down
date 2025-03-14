@@ -109,7 +109,8 @@
         "animation": "ambient",
         "animation_frames": 4,
         "animation_speed": 0.08,
-        "interaction_sound": "effects/potion.wav"
+        "interaction_sound": "effects/potion.wav",
+        "description": "Restaura sua saúde em 20 pontos."
       }
     },
     "9": {
@@ -123,7 +124,8 @@
         "animation_frames": 3,
         "animation_speed": 0.2,
         "drops": ["item_7", "item_8", "item_10"],
-        "interaction_sound": "effects/chest.wav"
+        "interaction_sound": "effects/chest.wav",
+        "color": [150, 75, 0]
       }
     },
     "10": {
@@ -138,7 +140,9 @@
         "animation": "ambient",
         "animation_frames": 4,
         "animation_speed": 0.1,
-        "interaction_sound": "effects/key.wav"
+        "interaction_sound": "effects/key.wav",
+        "color": [255, 215, 0],
+        "description": "Desbloqueia portas trancadas e baús."
       }
     },
     "11": {
@@ -153,7 +157,8 @@
         "animation": "on_interaction",
         "animation_frames": 5,
         "animation_speed": 0.15,
-        "interaction_sound": "effects/door_locked.wav"
+        "interaction_sound": "effects/door_locked.wav",
+        "color": [150, 75, 0]
       }
     },
     "12": {
@@ -164,7 +169,10 @@
       "details": {
         "interactive": true,
         "message": "Mensagem da placa será definida no mapa",
-        "interaction_sound": "effects/sign.wav"
+        "interaction_sound": "effects/sign.wav",
+        "color": [150, 75, 0],
+        "price": 5,
+        "description": "Uma placa de madeira para escrever mensagens."
       }
     },
     "20": {

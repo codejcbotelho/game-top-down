@@ -215,13 +215,38 @@ class Game:
             
             elif self.game_state.is_interactive_dialog():
                 # Diálogo interativo
-                # Processar as opções disponíveis ou esperar por uma resposta específica
-                # A implementação depende do tipo de diálogo interativo
-                # Este é um placeholder que pode ser expandido com base nos requisitos
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.close_dialog()
-                    # Outras teclas poderiam ser usadas para selecionar opções
+                    # Teclas numéricas para selecionar opções
+                    elif event.key >= pygame.K_1 and event.key <= pygame.K_9:
+                        option_index = event.key - pygame.K_1  # 0-indexed
+                        if hasattr(self, 'dialog_options') and option_index < len(self.dialog_options):
+                            # Chama o callback se existir
+                            if hasattr(self, 'dialog_callback') and self.dialog_callback:
+                                self.dialog_callback(option_index)
+                            else:
+                                self.close_dialog()
+                    # Navegar entre opções com setas
+                    elif event.key == pygame.K_UP:
+                        if hasattr(self, 'dialog_options') and self.dialog_options:
+                            if not hasattr(self, 'selected_option'):
+                                self.selected_option = 0
+                            self.selected_option = (self.selected_option - 1) % len(self.dialog_options)
+                    elif event.key == pygame.K_DOWN:
+                        if hasattr(self, 'dialog_options') and self.dialog_options:
+                            if not hasattr(self, 'selected_option'):
+                                self.selected_option = 0
+                            self.selected_option = (self.selected_option + 1) % len(self.dialog_options)
+                    # Selecionar opção atual com ENTER
+                    elif event.key == pygame.K_RETURN:
+                        if hasattr(self, 'dialog_options') and hasattr(self, 'selected_option'):
+                            if self.selected_option < len(self.dialog_options):
+                                # Chama o callback se existir
+                                if hasattr(self, 'dialog_callback') and self.dialog_callback:
+                                    self.dialog_callback(self.selected_option)
+                                else:
+                                    self.close_dialog()
             
             elif self.game_state.is_inventory():
                 # Inventário do jogador
@@ -242,6 +267,50 @@ class Game:
                         item_index = event.key - pygame.K_1  # 0-indexed
                         if hasattr(self, 'current_shop_items') and item_index < len(self.current_shop_items):
                             self.buy_item(item_index)
+                    # Navegar entre itens com setas
+                    elif event.key == pygame.K_UP:
+                        if hasattr(self, 'current_shop_items') and self.current_shop_items:
+                            if not hasattr(self, 'selected_option'):
+                                self.selected_option = 0
+                            self.selected_option = (self.selected_option - 1) % len(self.current_shop_items)
+                    elif event.key == pygame.K_DOWN:
+                        if hasattr(self, 'current_shop_items') and self.current_shop_items:
+                            if not hasattr(self, 'selected_option'):
+                                self.selected_option = 0
+                            self.selected_option = (self.selected_option + 1) % len(self.current_shop_items)
+                    # Comprar item selecionado com ENTER
+                    elif event.key == pygame.K_RETURN:
+                        if hasattr(self, 'current_shop_items') and hasattr(self, 'selected_option'):
+                            if self.selected_option < len(self.current_shop_items):
+                                self.buy_item(self.selected_option)
+            
+            elif self.game_state.is_selling():
+                # Processo de venda
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        # Cancela a venda
+                        self.close_dialog()
+                    elif event.key >= pygame.K_1 and event.key <= pygame.K_9:
+                        # Seleciona um item pelo número
+                        item_index = event.key - pygame.K_1  # 0-indexed
+                        if hasattr(self, 'sellable_items') and item_index < len(self.sellable_items):
+                            self.sell_item(item_index)
+                    # Navegar entre itens com setas
+                    elif event.key == pygame.K_UP:
+                        if hasattr(self, 'sellable_items') and self.sellable_items:
+                            if not hasattr(self, 'selected_option'):
+                                self.selected_option = 0
+                            self.selected_option = (self.selected_option - 1) % len(self.sellable_items)
+                    elif event.key == pygame.K_DOWN:
+                        if hasattr(self, 'sellable_items') and self.sellable_items:
+                            if not hasattr(self, 'selected_option'):
+                                self.selected_option = 0
+                            self.selected_option = (self.selected_option + 1) % len(self.sellable_items)
+                    # Vender item selecionado com ENTER
+                    elif event.key == pygame.K_RETURN:
+                        if hasattr(self, 'sellable_items') and hasattr(self, 'selected_option'):
+                            if self.selected_option < len(self.sellable_items):
+                                self.sell_item(self.selected_option)
             
             # Eventos de teclado
             elif event.type == pygame.KEYDOWN:
@@ -420,6 +489,9 @@ class Game:
         self.dialog_options = options or []
         self.dialog_callback = callback
         
+        # Reseta a opção selecionada
+        self.selected_option = 0
+        
         # Define o estado do jogo de acordo com o tipo de diálogo
         if interactive:
             self.game_state.change_state(GameState.INTERACTIVE_DIALOG)
@@ -428,29 +500,30 @@ class Game:
     
     def close_dialog(self):
         """Fecha o diálogo atual e retorna ao estado anterior"""
+        print(f"Fechando diálogo...")
+        
         # Limpa as informações do diálogo
         self.dialog_message = None
         self.dialog_item_id = None
         self.dialog_options = []
         self.dialog_callback = None
+        self.current_shop_items = []
+        self.sellable_items = []
         
-        # Limpa também as informações da loja, se houver
-        if hasattr(self, 'current_shop_items'):
-            delattr(self, 'current_shop_items')
-        if hasattr(self, 'current_shop_npc'):
-            delattr(self, 'current_shop_npc')
+        # Reseta a opção selecionada
+        self.selected_option = 0
         
-        # Retorna ao estado anterior
-        if hasattr(self, 'previous_game_state'):
-            self.game_state.change_state(self.previous_game_state)
-            delattr(self, 'previous_game_state')
-        else:
-            self.game_state.change_state(GameState.PLAYING)
+        # Volta ao estado anterior
+        if hasattr(self, 'previous_game_state') and self.previous_game_state is not None:
+            previous = self.previous_game_state
+            self.previous_game_state = None
+            self.game_state.change_state(previous)
             
-        # Garante que não estamos em nenhum estado de diálogo
-        if self.game_state.is_any_dialog():
-            print("Aviso: Ainda em estado de diálogo após close_dialog(). Forçando estado PLAYING.")
-            self.game_state.change_state(GameState.PLAYING)
+            # Verifica se ainda está no estado de diálogo após a mudança
+            # (isso pode acontecer se o estado anterior também era um diálogo)
+            if self.game_state.is_any_dialog():
+                print("Aviso: Ainda em estado de diálogo após close_dialog(). Forçando estado PLAYING.")
+                self.game_state.change_state(GameState.PLAYING)
     
     def render(self):
         """Renderiza os objetos na tela"""
@@ -733,9 +806,9 @@ class Game:
         if message is None:
             message = "..."  # Define uma mensagem padrão para evitar erros
         
-        # Posição do diálogo (centralizado na parte inferior)
+        # Posição do diálogo (centralizado na tela)
         dialog_x = (self.WIDTH - dialog_width) // 2
-        dialog_y = self.HEIGHT - dialog_height - 20
+        dialog_y = (self.HEIGHT - dialog_height) // 2
         
         # Cria o fundo e a borda do diálogo
         pygame.draw.rect(self.screen, bg_color, 
@@ -793,17 +866,89 @@ class Game:
             text = font.render(line, True, text_color)
             self.screen.blit(text, (text_x, dialog_y + 20 + i * 25))
         
+        # Renderiza as opções com indicador de seleção para diálogos interativos ou compra/venda
+        if self.game_state.is_interactive_dialog() and hasattr(self, 'dialog_options') and self.dialog_options:
+            options_y = dialog_y + dialog_height - 80
+            
+            # Certifica-se de que selected_option existe e está dentro dos limites
+            if not hasattr(self, 'selected_option'):
+                self.selected_option = 0
+            self.selected_option = min(max(0, self.selected_option), len(self.dialog_options) - 1)
+            
+            for i, option in enumerate(self.dialog_options):
+                option_text = f"{i+1}. {option}"
+                
+                # Destaca a opção selecionada
+                if i == self.selected_option:
+                    # Triângulo indicador
+                    pygame.draw.polygon(self.screen, (255, 255, 0), [
+                        (text_x - 15, options_y + i * 25 + 12),
+                        (text_x - 5, options_y + i * 25 + 6),
+                        (text_x - 5, options_y + i * 25 + 18)
+                    ])
+                    
+                    # Texto da opção selecionada em negrito ou cor diferente
+                    text = font.render(option_text, True, (255, 255, 0))
+                else:
+                    text = font.render(option_text, True, text_color)
+                
+                self.screen.blit(text, (text_x, options_y + i * 25))
+        
+        # Opções de compra
+        elif self.game_state.is_shopping() and hasattr(self, 'current_shop_items') and self.current_shop_items:
+            # Obtém a opção selecionada para compra
+            if not hasattr(self, 'selected_option'):
+                self.selected_option = 0
+            self.selected_option = min(max(0, self.selected_option), len(self.current_shop_items) - 1)
+            
+            for i, item_info in enumerate(self.current_shop_items):
+                if i == self.selected_option:
+                    # Triângulo indicador
+                    pygame.draw.polygon(self.screen, (255, 255, 0), [
+                        (text_x - 15, dialog_y + 70 + i * 25 + 12),
+                        (text_x - 5, dialog_y + 70 + i * 25 + 6),
+                        (text_x - 5, dialog_y + 70 + i * 25 + 18)
+                    ])
+                    text = font.render(f"{i+1}. {item_info}", True, (255, 255, 0))
+                else:
+                    text = font.render(f"{i+1}. {item_info}", True, text_color)
+                self.screen.blit(text, (text_x, dialog_y + 70 + i * 25))
+        
+        # Opções de venda
+        elif self.game_state.is_selling() and hasattr(self, 'sellable_items') and self.sellable_items:
+            # Obtém a opção selecionada para venda
+            if not hasattr(self, 'selected_option'):
+                self.selected_option = 0
+            self.selected_option = min(max(0, self.selected_option), len(self.sellable_items) - 1)
+            
+            for i, item_info in enumerate(self.sellable_items):
+                if i == self.selected_option:
+                    # Triângulo indicador
+                    pygame.draw.polygon(self.screen, (255, 255, 0), [
+                        (text_x - 15, dialog_y + 70 + i * 25 + 12),
+                        (text_x - 5, dialog_y + 70 + i * 25 + 6),
+                        (text_x - 5, dialog_y + 70 + i * 25 + 18)
+                    ])
+                    text = font.render(f"{i+1}. {item_info}", True, (255, 255, 0))
+                else:
+                    text = font.render(f"{i+1}. {item_info}", True, text_color)
+                self.screen.blit(text, (text_x, dialog_y + 70 + i * 25))
+        
         # Adiciona uma instrução no final do diálogo para informar como interagir
         if self.game_state.is_dialog():
             hint_text = font.render("Pressione qualquer tecla para continuar...", True, (100, 100, 100))
             hint_rect = hint_text.get_rect(bottomright=(dialog_x + dialog_width - 15, dialog_y + dialog_height - 10))
             self.screen.blit(hint_text, hint_rect)
         elif self.game_state.is_interactive_dialog():
-            hint_text = font.render("Pressione o número da opção ou ESC para sair...", True, (100, 100, 100))
+            hint_text = font.render("Use ↑↓ para escolher ou pressione o número da opção", True, (100, 100, 100))
             hint_rect = hint_text.get_rect(bottomright=(dialog_x + dialog_width - 15, dialog_y + dialog_height - 10))
             self.screen.blit(hint_text, hint_rect)
         elif self.game_state.is_shopping():
-            hint_text = font.render("Pressione o número do item para comprar ou ESC para sair...", True, (100, 100, 100))
+            hint_text = font.render("Use ↑↓ para escolher ou pressione o número do item", True, (100, 100, 100))
+            hint_rect = hint_text.get_rect(bottomright=(dialog_x + dialog_width - 15, dialog_y + dialog_height - 10))
+            self.screen.blit(hint_text, hint_rect)
+        elif self.game_state.is_selling():
+            hint_text = font.render("Use ↑↓ para escolher ou pressione o número do item", True, (100, 100, 100))
             hint_rect = hint_text.get_rect(bottomright=(dialog_x + dialog_width - 15, dialog_y + dialog_height - 10))
             self.screen.blit(hint_text, hint_rect)
     
@@ -858,20 +1003,23 @@ class Game:
             elif item_type == "npc":
                 # Verifica se o NPC é uma loja
                 is_shop = details.get("shop", False)
+                is_buyer = details.get("buyer", False)
                 
-                if is_shop:
-                    # Obtém os itens à venda
+                if is_shop or is_buyer:
+                    # Obtém os itens à venda (se for loja)
                     items_for_sale = details.get("items_for_sale", [])
                     
-                    if items_for_sale:
-                        # Mostra diálogo da loja (interativo)
+                    # Se o NPC pode comprar itens, mostra opções de compra e venda
+                    if is_shop and is_buyer:
+                        self.show_shop_buyer_options(obj_id, items_for_sale, details)
+                    # Se o NPC só vende itens
+                    elif is_shop:
                         shop_dialog = details.get("dialog", "O que você gostaria de comprar?")
-                        
-                        # Abre a interface de compra como um diálogo interativo
                         self.show_shop_interface(obj_id, items_for_sale, shop_dialog)
-                    else:
-                        # Sem itens à venda, mostra diálogo simples
-                        self.show_dialog("Esta loja não tem itens para vender no momento.", obj_id, interactive=False)
+                    # Se o NPC só compra itens
+                    elif is_buyer:
+                        buyer_dialog = details.get("dialog", "Estou interessado em comprar seus itens.")
+                        self.show_selling_interface(obj_id, details, buyer_dialog)
                 else:
                     # Obtém o diálogo do NPC
                     # Primeiro verifica nos detalhes do objeto no mapa
@@ -897,42 +1045,63 @@ class Game:
                     self.show_dialog(message, obj_id, interactive=False)
     
     def show_shop_interface(self, npc_id, items_for_sale, shop_dialog="O que você gostaria de comprar?"):
-        """Mostra interface de compra com os itens disponíveis"""
+        """Mostra a interface da loja"""
+        # Se não houver itens à venda, mostra uma mensagem e retorna
         if not items_for_sale:
+            self.show_dialog("Desculpe, não tenho itens para vender no momento.")
             return
         
-        # Cria uma lista de itens com seus preços
+        # Obtém as informações dos itens
         shop_items = []
+        current_shop_items_info = []
+        
         for item_id in items_for_sale:
-            item_num_id = item_id.replace("item_", "")
-            
-            if item_num_id in self.map.item_config.get("tile_types", {}):
-                item_config = self.map.item_config["tile_types"][item_num_id]
-                item_name = item_config.get("name", "Item desconhecido")
-                item_price = item_config.get("price", 5)  # Preço padrão: 5 moedas
+            try:
+                item_type = item_id.split("_")[0]
+                item_number = item_id.split("_")[1]
                 
-                shop_items.append({
-                    "id": item_id,
-                    "name": item_name,
-                    "price": item_price
-                })
+                if item_type == "item":
+                    # Verifica se existe no config
+                    item_data = self.map.item_config["tile_types"].get(item_number)
+                    if not item_data:
+                        continue
+                    
+                    # Obtém o nome e preço
+                    item_name = item_data.get("name", f"Item {item_number}")
+                    item_price = item_data.get("price", 10)  # Preço padrão se não definido
+                    
+                    # Adiciona à lista de itens
+                    shop_items.append({
+                        "id": item_id,
+                        "name": item_name,
+                        "price": item_price
+                    })
+                    
+                    # Adiciona informação formatada para exibição
+                    current_shop_items_info.append(f"{item_name} - {item_price} moedas")
+            except Exception as e:
+                print(f"Erro ao processar item da loja {item_id}: {e}")
         
-        # Gera o texto com os itens à venda
-        items_text = ""
-        for i, item in enumerate(shop_items):
-            items_text += f"{i+1}. {item['name']} - {item['price']} moedas\n"
+        # Se todos os itens foram inválidos, mostra mensagem
+        if not shop_items:
+            self.show_dialog("Desculpe, não tenho itens válidos para vender no momento.")
+            return
         
-        # Prepara a mensagem completa da loja
-        full_message = f"{shop_dialog}\n\nItens à venda (você tem {self.player.coins} moedas):\n{items_text}\nPressione o número do item para comprar ou ESC para sair."
-        
-        # Mostra o diálogo interativo da loja
-        self.show_dialog(full_message, npc_id, interactive=True)
-        
-        # Guarda os itens para processamento posterior
-        self.current_shop_items = shop_items
+        # Armazena os itens da loja atual
         self.current_shop_npc = npc_id
+        self.current_shop_items = shop_items
+        self.current_shop_items_info = current_shop_items_info
         
-        # Define o estado do jogo para compras
+        # Reseta a opção selecionada
+        self.selected_option = 0
+        
+        # Monta a mensagem da loja
+        coins_message = f"Itens à venda (você tem {self.player.coins} moedas):"
+        items_message = "\n".join([f"{i+1}. {item_info}" for i, item_info in enumerate(current_shop_items_info)])
+        full_message = f"{shop_dialog}\n{coins_message}\n{items_message}\nPressione o número do item para comprar ou ESC para sair."
+        
+        # Mostra o diálogo da loja
+        self.dialog_message = full_message
         self.game_state.change_state(GameState.SHOPPING)
     
     def buy_item(self, item_index):
@@ -973,6 +1142,164 @@ class Game:
             
             # Depois mostra a mensagem de erro como um novo diálogo
             self.show_dialog(error_message, self.current_shop_npc if hasattr(self, 'current_shop_npc') else None, interactive=False)
+    
+    def show_shop_buyer_options(self, npc_id, items_for_sale, details):
+        """Mostra opções para comprar ou vender itens"""
+        # Diálogo introdutório do NPC
+        shop_dialog = details.get("dialog", "Posso comprar ou vender itens para você.")
+        
+        # Prepara as opções
+        options = [
+            "Quero comprar itens",
+            "Quero vender meus itens",
+            "Só estou olhando"
+        ]
+        
+        # Mostra diálogo interativo com opções
+        self.show_dialog(f"{shop_dialog}\n\nO que você deseja fazer?", npc_id, interactive=True, options=options)
+        
+        # Guarda informações para uso posterior
+        self.current_shop_npc = npc_id
+        self.current_shop_items = items_for_sale
+        self.current_shop_details = details
+        
+        # Define o estado do jogo para diálogo interativo
+        self.game_state.change_state(GameState.INTERACTIVE_DIALOG)
+        
+        # Define uma função de callback para processar a escolha do jogador
+        self.dialog_callback = self.process_shop_buyer_choice
+    
+    def process_shop_buyer_choice(self, choice_index):
+        """Processa a escolha do jogador para comprar ou vender"""
+        if choice_index == 0:  # Comprar
+            items_for_sale = self.current_shop_items
+            shop_dialog = self.current_shop_details.get("dialog", "O que você gostaria de comprar?")
+            self.show_shop_interface(self.current_shop_npc, items_for_sale, shop_dialog)
+        elif choice_index == 1:  # Vender
+            buyer_dialog = self.current_shop_details.get("buyer_dialog", "O que você gostaria de vender?")
+            self.show_selling_interface(self.current_shop_npc, self.current_shop_details, buyer_dialog)
+        else:  # Cancelar
+            self.close_dialog()
+    
+    def show_selling_interface(self, npc_id, details, buyer_dialog="O que você gostaria de vender?"):
+        """Mostra a interface para vender itens ao NPC"""
+        # Obtém os preços de compra do NPC
+        buy_prices = details.get("buy_prices", {})
+        
+        # Se não tiver preços definidos, mostra uma mensagem
+        if not buy_prices:
+            self.show_dialog("Desculpe, não estou comprando itens no momento.")
+            return
+        
+        # Verifica se o jogador tem itens no inventário
+        if not hasattr(self.player, 'inventory') or not self.player.inventory:
+            self.show_dialog("Você não tem itens para vender.")
+            return
+        
+        # Conta os itens no inventário para agrupar
+        item_counts = {}
+        for item in self.player.inventory:
+            if item in item_counts:
+                item_counts[item] += 1
+            else:
+                item_counts[item] = 1
+        
+        # Filtra apenas os itens que o NPC compra
+        sellable_items = []
+        sellable_items_info = []
+        
+        for item_id, count in item_counts.items():
+            # Verifica se o NPC compra este item
+            if item_id in buy_prices:
+                price = buy_prices[item_id]
+                
+                try:
+                    # Obtém informações do item
+                    item_type = item_id.split("_")[0]
+                    item_number = item_id.split("_")[1]
+                    
+                    if item_type == "item":
+                        # Verifica se existe no config
+                        item_data = self.map.item_config["tile_types"].get(item_number)
+                        if not item_data:
+                            continue
+                        
+                        # Obtém o nome
+                        item_name = item_data.get("name", f"Item {item_number}")
+                        
+                        # Adiciona à lista de itens vendáveis
+                        sellable_items.append({
+                            "id": item_id,
+                            "name": item_name,
+                            "price": price,
+                            "count": count
+                        })
+                        
+                        # Adiciona informação formatada para exibição
+                        sellable_items_info.append(f"{item_name} (x{count}) - {price} moedas cada")
+                except Exception as e:
+                    print(f"Erro ao processar item para venda {item_id}: {e}")
+        
+        # Se o jogador não tiver itens que o NPC compra
+        if not sellable_items:
+            self.show_dialog("Você não tem itens que eu possa comprar no momento.")
+            return
+        
+        # Armazena os itens vendáveis
+        self.current_buyer_npc = npc_id
+        self.sellable_items = sellable_items
+        self.sellable_items_info = sellable_items_info
+        
+        # Reseta a opção selecionada
+        self.selected_option = 0
+        
+        # Monta a mensagem de venda
+        coins_message = f"Itens para vender (você tem {self.player.coins} moedas):"
+        items_message = "\n".join([f"{i+1}. {item_info}" for i, item_info in enumerate(sellable_items_info)])
+        full_message = f"{buyer_dialog}\n{coins_message}\n{items_message}\nPressione o número do item para vender ou ESC para sair."
+        
+        # Mostra o diálogo de venda
+        self.dialog_message = full_message
+        self.game_state.change_state(GameState.SELLING)
+    
+    def sell_item(self, item_index):
+        """Processa a venda de um item do inventário"""
+        if not hasattr(self, 'sellable_items') or not self.sellable_items:
+            return
+            
+        # Verifica se o índice é válido
+        if item_index < 0 or item_index >= len(self.sellable_items):
+            self.show_dialog("Item inválido.", self.current_buyer_npc, interactive=False)
+            return
+            
+        # Obtém o item selecionado
+        selected_item = self.sellable_items[item_index]
+        
+        # Verifica se o jogador ainda tem este item
+        if selected_item["id"] in self.player.inventory:
+            # Adiciona as moedas ao jogador
+            self.player.add_coins(selected_item["price"])
+            
+            # Remove o item do inventário
+            self.player.remove_item_from_inventory(selected_item["id"])
+            
+            # Atualiza a contagem do item
+            selected_item["count"] -= 1
+            if selected_item["count"] <= 0:
+                # Remove o item da lista se não houver mais
+                self.sellable_items[item_index] = None
+            
+            # Prepara mensagem de sucesso
+            success_message = f"Você vendeu {selected_item['name']} por {selected_item['price']} moedas! Agora você tem {self.player.coins} moedas."
+            
+            # Primeiro fecha o diálogo atual
+            self.close_dialog()
+            
+            # Depois mostra a mensagem de sucesso como um novo diálogo
+            self.show_dialog(success_message, self.current_buyer_npc, interactive=False)
+        else:
+            # Mensagem de erro se o item não estiver mais disponível
+            self.show_dialog("Você não possui mais este item.", self.current_buyer_npc, interactive=False)
     
     def run(self):
         """Loop principal do jogo"""
